@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scroll utile</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#07080C">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:dark;
+  --bg:#07080C; --ink:#F6F3EE; --soft:#C9C4BC; --chip:#FFFFFF1F; --chip-on:#F6F3EE; --chip-on-ink:#07080C;
+  --sheet:#15171E; --line:#FFFFFF1A; --good:#7EE2A8; --bad:#FF8E8E;
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){ --bg:#07080C; --sheet:#F7F4EE; --sheet-ink:#15171E; }
+}
+:root[data-theme="light"]{ --sheet:#F7F4EE; --sheet-ink:#15171E; }
+:root[data-theme="dark"]{ --bg:#07080C; }
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;position:relative}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:#07080C}
+button{font:inherit;color:inherit}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+
+#feed{position:absolute;inset:0;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none}
+#feed::-webkit-scrollbar{display:none}
+.card{position:relative;height:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;
+  background:radial-gradient(120% 80% at 20% 15%, var(--g1) 0%, var(--g2) 70%);display:flex;align-items:safe center}
+.card::after{content:"";position:absolute;inset:auto 0 0 0;height:45%;background:linear-gradient(transparent,#0008);pointer-events:none}
+.content{position:relative;z-index:1;padding:7.2rem 5.2rem 5.5rem 1.4rem;max-width:40rem;width:100%}
+.emoji{font-size:clamp(3.5rem,16vw,5.5rem);line-height:1;margin-bottom:1.2rem;display:inline-grid;place-items:center;
+  width:1.6em;height:1.6em;border-radius:50%;background:#FFFFFF14;border:1px solid #FFFFFF22}
+.card h2{font-size:clamp(1.75rem,7.2vw,2.6rem);line-height:1.06;letter-spacing:-.025em;font-weight:800;margin:0 0 1rem;text-wrap:balance}
+.card p.body{font-size:1.08rem;line-height:1.55;margin:0;color:#F2EEE8;max-width:58ch}
+.steps{list-style:none;padding:0;margin:1.2rem 0 0;display:grid;gap:.55rem;counter-reset:s}
+.steps li{counter-increment:s;display:flex;gap:.7rem;align-items:flex-start;font-size:1rem;line-height:1.4;background:#FFFFFF10;border-radius:14px;padding:.6rem .8rem}
+.steps li::before{content:counter(s);flex:none;width:1.6rem;height:1.6rem;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:.9rem;background:var(--a);color:#111}
+.meta{position:absolute;left:1.4rem;right:5rem;bottom:1.4rem;z-index:2;font-size:.95rem;color:var(--soft);display:flex;gap:.5rem;align-items:center}
+.meta b{color:var(--ink);font-weight:600}
+.tag-ai{font-size:.8rem;background:#FFFFFF22;border-radius:999px;padding:.15rem .55rem;color:var(--ink)}
+
+/*r*/.rail{position:absolute;right:.7rem;bottom:4.2rem;z-index:3;display:flex;flex-direction:column;gap:1.1rem;align-items:center}
+.rbtn{background:none;border:0;padding:0;display:flex;flex-direction:column;align-items:center;gap:.2rem;cursor:pointer;font-size:.78rem;font-weight:600;color:var(--ink)}
+.rbtn .ic{width:3rem;height:3rem;border-radius:50%;display:grid;place-items:center;background:#0000002e;backdrop-filter:blur(6px)}
+.rbtn svg{width:1.7rem;height:1.7rem;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rbtn[aria-pressed="true"].like svg{fill:#FF4D6D;stroke:#FF4D6D}
+.rbtn[aria-pressed="true"].save svg{fill:#FFD866;stroke:#FFD866}
+.burst{position:absolute;z-index:4;pointer-events:none;font-size:6rem;transform:translate(-50%,-50%) scale(.2);opacity:0}
+@media (prefers-reduced-motion:no-preference){
+  .burst.go{animation:burst .7s ease-out forwards}
+  @keyframes burst{30%{transform:translate(-50%,-50%) scale(1.15);opacity:1}100%{transform:translate(-50%,-80%) scale(1);opacity:0}}
+}
+
+header{position:absolute;top:0;left:0;right:0;z-index:5;padding:.6rem 0 .4rem;background:linear-gradient(#000a,transparent)}
+.top{display:flex;justify-content:space-between;align-items:center;padding:0 1rem}
+.brand{font-weight:800;font-size:1.15rem;letter-spacing:-.02em}
+.stat{font-size:.85rem;color:var(--soft)}
+.stat b{color:var(--ink)}
+.tabs{display:flex;gap:.4rem;overflow-x:auto;padding:.55rem 1rem .2rem;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;border:0;border-radius:999px;padding:.38rem .8rem;font-size:.92rem;font-weight:600;background:var(--chip);cursor:pointer;white-space:nowrap;backdrop-filter:blur(6px)}
+.tab[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink)}
+
+.opts{display:grid;gap:.6rem;margin-top:1.3rem}
+.opt{text-align:left;border:1.5px solid #FFFFFF40;background:#FFFFFF10;border-radius:16px;padding:.9rem 1rem;font-size:1.05rem;cursor:pointer}
+.opt.good{border-color:var(--good);color:var(--good);font-weight:600}
+.opt.bad{border-color:var(--bad);color:var(--bad);text-decoration:line-through}
+.ex{margin-top:1rem;color:#E8E3DA;line-height:1.5}
+.big{border:0;background:var(--ink);color:#07080C;border-radius:999px;padding:.8rem 1.2rem;font-weight:700;cursor:pointer;margin-top:1.2rem;display:inline-block}
+.ghost{border:1.5px solid #FFFFFF55;background:transparent;border-radius:999px;padding:.75rem 1.1rem;font-weight:600;cursor:pointer;margin:1rem .5rem 0 0}
+.status{margin-top:1rem;color:var(--soft);font-size:.95rem;min-height:1.4em}
+
+dialog{border:0;padding:0;background:var(--sheet,#15171E);color:var(--sheet-ink,#F6F3EE);width:min(36rem,100%);max-height:80vh;border-radius:22px}
+dialog::backdrop{background:#000a}
+.dh{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.2rem;border-bottom:1px solid #8884;position:sticky;top:0;background:inherit}
+.dh h3{margin:0;font-size:1.15rem}
+.dh button{border:0;background:#8883;border-radius:999px;padding:.4rem .8rem;cursor:pointer}
+.list{padding:.4rem 1.2rem 1.2rem}
+.item{padding:.85rem 0;border-bottom:1px solid #8883}
+.item h4{margin:0 0 .3rem;font-size:1.02rem;line-height:1.25}
+.item p{margin:0;opacity:.75;font-size:.93rem;line-height:1.45}
+.item button{margin-top:.45rem;border:0;background:none;opacity:.7;text-decoration:underline;cursor:pointer;padding:0;font-size:.85rem}
+.toast{position:absolute;left:50%;bottom:5rem;transform:translateX(-50%);z-index:9;background:#000c;color:#fff;border-radius:999px;padding:.55rem 1rem;font-size:.92rem;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+
+.viz{display:block;width:100%;height:210px;margin:0 0 1.1rem;border-radius:18px;background:#0000002a;border:1px solid #FFFFFF1c}
+.src{font-size:.82rem;color:var(--soft);margin-top:.8rem}
+.learn{display:flex;gap:.5rem;margin-top:1.3rem;flex-wrap:wrap}
+.lb{border:1.5px solid #FFFFFF45;background:#FFFFFF12;border-radius:999px;padding:.55rem .95rem;font-weight:600;font-size:.92rem;cursor:pointer}
+.lb.on{background:var(--a);color:#111;border-color:var(--a)}
+.rv .content{padding-right:1.4rem}
+.rv-label{display:table;font-size:.85rem;font-weight:700;background:var(--a);color:#111;border-radius:999px;padding:.2rem .65rem;margin-bottom:.9rem}
+.reveal[hidden]{display:none}
+.subtabs{display:flex;gap:.35rem;overflow-x:auto;padding:.35rem 1rem 0;scrollbar-width:none}
+.subtabs::-webkit-scrollbar{display:none}
+.subtabs[hidden]{display:none}
+.sub{flex:none;border:1px solid #FFFFFF33;background:#0000004d;border-radius:999px;padding:.28rem .7rem;font-size:.82rem;cursor:pointer;white-space:nowrap}
+.sub[aria-pressed="true"]{background:var(--ink);color:#07080C}
+.rbtn[aria-pressed="true"].flag svg{stroke:#FF9F5A}
+.dtabs{display:flex;gap:.4rem;padding:.6rem 1.2rem 0}
+.dtab{border:0;background:#8882;border-radius:999px;padding:.35rem .8rem;cursor:pointer;font-size:.9rem}
+.dtab[aria-pressed="true"]{background:#8886;font-weight:700}
+.prog{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem;padding:.4rem 0}
+.prog div{background:#8881;border-radius:14px;padding:.8rem}
+.prog b{display:block;font-size:1.6rem}
+.copy{border:0;background:#8883;border-radius:999px;padding:.5rem .9rem;cursor:pointer;margin-top:.6rem}
+.rail{gap:.85rem}
+@media (max-height:740px){.viz{height:150px;margin-bottom:.8rem}.card h2{font-size:1.55rem}.card p.body{font-size:1rem}.content{padding-top:6.6rem}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><div class="brand">Scroll utile</div><div class="stat" id="stat"></div></div>
+  <nav class="tabs" id="tabs" aria-label="Thèmes"></nav>
+  <nav class="subtabs" id="subtabs" aria-label="Matières" hidden></nav>
+</header>
+<main id="feed" aria-live="polite"></main>
+<div class="toast" id="toast" role="status"></div>
+<dialog id="dlg"><div class="dh"><h3>Ma liste</h3><button id="close">Fermer</button></div><div class="dtabs" id="dtabs"></div><div class="list" id="list"></div></dialog>
+<script>
+const THEMES = {
+  manip:{label:"Manip", e:"🩻", g:["#0E3B43","#081A22"], a:"#5FE0D0", desc:"imagerie médicale de niveau DTS IMRT 2e année : artefacts et paramètres IRM, physique et dose en scanner, temps d’injection, produits de contraste et recommandations, médecine nucléaire (traceurs, protocoles, contrôle qualité des MRP), ordres de grandeur de dose, sécurité IRM"},
+  volley:{label:"Volley", e:"🏐", g:["#7A2E12","#2A0F08"], a:"#FFB066", desc:"volley-ball pour un réceptionneur-attaquant de niveau pré-régional : lecture du contre, gestion des ballons hors système, variations d’attaque, réception du flottant, transition, lecture au contre, tactique de service, prévention des blessures du volleyeur. Pas de règles de base"},
+  humain:{label:"L’humain", e:"🫂", g:["#2B2560","#100D26"], a:"#B9A8FF", desc:"psychologie appliquée et utile : techniques concrètes issues de la recherche pour passer à l’action, gérer le stress, l’échec, les relations, la communication avec un patient ou un proche, les tournants de vie"},
+  savoir:{label:"Savoir-faire", e:"🛠️", g:["#1F4A2C","#0A1A10"], a:"#9BE39F", desc:"savoir-faire concrets et non évidents : techniques de cuisine (science culinaire), sécurité alimentaire, dépannages domestiques, entretien, éviter les arnaques"},
+  utile:{label:"Trucs utiles", e:"💡", g:["#5A4210","#1E1605"], a:"#FFD866", desc:"astuces utiles et peu connues pour un étudiant en France : méthodes d’apprentissage validées par la recherche, logement et droits du locataire, impôts et aides étudiantes, stage, organisation"}
+};
+
+const CARDS = [
+ // ---------- MANIP
+ {id:"am1",th:"manip",e:"🔁",t:"Repliement en IRM : 4 façons de s’en débarrasser",b:"Quand l’anatomie dépasse le champ de vue dans la direction de codage de phase, elle réapparaît de l’autre côté de l’image.",steps:["Agrandir le FOV","Activer le suréchantillonnage en phase (no phase wrap)","Inverser la direction de codage de phase","Poser des bandes de saturation sur ce qui dépasse"]},
+ {id:"am2",th:"manip",e:"🔩",t:"Matériel métallique : réduire l’artefact de susceptibilité",b:"L’écho de gradient est la pire séquence avec du métal : il n’y a pas d’impulsion 180° pour rattraper le déphasage. Privilégie le spin écho rapide, augmente la bande passante, raccourcis le TE. Et à 1,5 T l’artefact est plus petit qu’à 3 T."},
+ {id:"am3",th:"manip",e:"📐",t:"L’angle magique peut simuler une tendinopathie",b:"Un tendon orienté à environ 55° par rapport à B0 apparaît en hypersignal sur les séquences à TE court (T1, DP). Sur une séquence à TE long, le faux hypersignal disparaît : c’est le piège classique de l’épaule et de la cheville."},
+ {id:"am4",th:"manip",e:"🌡️",t:"SAR : pourquoi la 3 T chauffe plus",b:"Le SAR augmente avec le carré du champ : à séquence égale, environ 4 fois plus à 3 T qu’à 1,5 T. Leviers : réduire l’angle de bascule des 180°, allonger le TR, diminuer le nombre de coupes ou l’ETL."},
+ {id:"am5",th:"manip",e:"📉",t:"Diviser le bruit par 2 en scanner coûte 4 fois la dose",b:"Le bruit varie comme 1/√mAs. Pour le diviser par 2, il faut multiplier les mAs par 4. C’est pour ça qu’on accepte une image un peu bruitée quand elle reste diagnostique : c’est l’optimisation."},
+ {id:"am6",th:"manip",e:"⚡",t:"Baisser les kV rend l’iode plus brillant",b:"L’atténuation de l’iode augmente quand l’énergie des photons se rapproche de son seuil K (33 keV). À 80-100 kV, le rehaussement est plus fort, ce qui permet de réduire la dose d’iode chez un patient mince."},
+ {id:"am7",th:"manip",e:"⏱️",t:"Temps artériel, portal : les repères",b:"Temps artériel vers 25-35 s après le début de l’injection, portal vers 70 s. En bolus tracking, on place une ROI dans l’aorte et on déclenche à un seuil, souvent autour de 100-150 UH, plus un délai."},
+ {id:"am8",th:"manip",e:"🦴",t:"Les stries entre les rochers : le durcissement du faisceau",b:"En traversant de l’os dense, le faisceau perd ses photons de basse énergie et devient plus « dur ». Le logiciel interprète mal ce changement et crée des bandes sombres, typiques de la fosse postérieure."},
+ {id:"am9",th:"manip",e:"💊",t:"Metformine et iode : la règle ESUR",b:"Si le DFG est inférieur à 30 mL/min ou en cas d’insuffisance rénale aiguë, on arrête la metformine au moment de l’injection. On contrôle la fonction rénale dans les 48 h et on la reprend si elle est stable."},
+ {id:"am10",th:"manip",e:"🫁",t:"Embolie pulmonaire en scinti : le « mismatch »",b:"La perfusion se fait aux MAA marqués au technétium, qui se bloquent dans les capillaires. Un défaut de perfusion avec une ventilation normale dans le même territoire évoque une embolie."},
+ {id:"am11",th:"manip",e:"🫘",t:"DMSA ou MAG3 : ne plus les confondre",b:"Le DMSA se fixe sur le cortex rénal : scinti statique, cicatrices de pyélonéphrite, fonction relative. Le MAG3 est sécrété par les tubules : scinti dynamique, drainage et obstruction, avec test au furosémide."},
+ {id:"am12",th:"manip",e:"🧪",t:"Technétium libre : où le retrouver",b:"Si la pureté radiochimique est insuffisante, le pertechnétate libre se fixe sur la thyroïde, l’estomac et les glandes salivaires. C’est ce que le contrôle qualité par chromatographie doit repérer avant injection."},
+ {id:"am13",th:"manip",e:"🩸",t:"Leucocytes marqués : le risque n°1 n’est pas l’infection",b:"On prélève le sang du patient, on isole et marque ses leucocytes, puis on les lui réinjecte. L’erreur la plus grave est de réinjecter le sang d’un autre patient : la traçabilité de l’identité à chaque étape est vitale."},
+ {id:"am14",th:"manip",e:"📊",t:"Ordres de grandeur de dose à connaître",b:"Radio du thorax : environ 0,02 mSv. Scanner abdomino-pelvien : de l’ordre de quelques mSv à une dizaine. Exposition naturelle en France : environ 3 mSv par an. Utile pour répondre à un patient inquiet."},
+ {id:"am15",th:"manip",e:"🧊",t:"Le quench, uniquement en dernier recours",b:"L’hélium liquide s’évapore brutalement et l’aimant perd son champ. On le déclenche quand une personne est coincée par un objet attiré. Si l’hélium fuit dans la salle, risque d’asphyxie : on évacue."},
+ // ---------- VOLLEY
+ {id:"av1",th:"volley",e:"🧱",t:"Contre collé côté ligne : joue sa main extérieure",b:"Vise le bord extérieur de la main du contreur, avec le poignet ouvert vers l’extérieur. Le ballon touche le contre et sort : point pour toi. C’est souvent plus rentable que de forcer en diagonale."},
+ {id:"av2",th:"volley",e:"👁️",t:"Un coup d’œil au contre avant de frapper",b:"Pendant ta montée, regarde le contre. Les deux contreurs mal fermés : frappe dans le trou entre eux. Ligne fermée : diagonale ou angle court. Contre en retard : frappe haute et profonde."},
+ {id:"av3",th:"volley",e:"🎈",t:"Ballon haut du fond : ne pars pas trop tôt",b:"Sur une passe haute hors système, commence ton élan quand le ballon atteint son sommet. Face à un contre à trois, l’objectif n’est pas de tuer le point mais de mettre la défense en difficulté sans faire la faute : fond de terrain, zone 1, ballon qui gêne."},
+ {id:"av4",th:"volley",e:"🌀",t:"Angle court : la frappe qui manque à beaucoup d’attaquants",b:"Depuis le poste 4, vise la diagonale très fermée vers les 3 mètres adverses. Le geste vient d’une pronation du poignet et de l’avant-bras au contact, sans changer l’élan pour ne rien annoncer."},
+ {id:"av5",th:"volley",e:"🎯",t:"Réception du flottant : attends le ballon",b:"Le flottant change de trajectoire jusqu’au dernier moment. Place tes appuis tôt, mais présente ta plateforme tard, contact devant toi, angle donné par les épaules. Ne suis pas le ballon avec les bras."},
+ {id:"av6",th:"volley",e:"🔄",t:"Transition : sors du filet en diagonale",b:"Après le contre, recule en diagonale vers ta zone d’élan, épaules ouvertes vers le terrain. Si tu cours en tournant le dos, tu perds la passe des yeux et tu arrives sans élan complet."},
+ {id:"av7",th:"volley",e:"🧠",t:"Au contre : ballon, passeur, ballon, attaquant",b:"Après la passe, arrête de suivre le ballon et regarde l’attaquant : son épaule et son approche disent où il va frapper. Puis presse les mains au-dessus du filet, pouces vers le haut, sans balancer les bras."},
+ {id:"av8",th:"volley",e:"🎾",t:"Service : vise l’attaquant, pas le vide",b:"Servir sur le réceptionneur qui doit ensuite attaquer perturbe son élan. Autres cibles payantes : la zone entre deux réceptionneurs, ou le joueur qui vient de rater une réception."},
+ {id:"av9",th:"volley",e:"🦵",t:"Douleur sous la rotule au saut : le genou du sauteur",b:"La tendinopathie rotulienne se gère plus qu’elle ne se repose. Des exercices isométriques peuvent calmer la douleur, puis un renforcement lourd et lent reconstruit le tendon. Si ça dure, consulte un kiné du sport."},
+ {id:"av10",th:"volley",e:"🦶",t:"Entorse de cheville : éviter la récidive",b:"La plupart arrivent en retombant sur le pied d’un adversaire sous le filet. Après une première entorse, le travail d’équilibre sur une jambe et une chevillère en match réduisent nettement le risque de recommencer."},
+ {id:"av11",th:"volley",e:"🪶",t:"Le roulé, c’est une arme, pas un aveu de faiblesse",b:"Contre bien formé et défense reculée : un roulé avec du topspin derrière le contre ou au centre court du terrain. Utilisé une ou deux fois, il oblige la défense à avancer et rouvre la frappe profonde."},
+ // ---------- HUMAIN
+ {id:"ah1",th:"humain",e:"🧩",t:"« Si… alors… » : la phrase qui fait passer à l’action",b:"Les chercheurs appellent ça les intentions de mise en œuvre. « Si je rentre de cours, alors j’ouvre ma fiche avant mon téléphone. » Lier une action précise à un moment précis augmente fortement les chances de la faire."},
+ {id:"ah2",th:"humain",e:"🔥",t:"Avant un oral ou un match, ne te dis pas « calme-toi »",b:"Dans une étude, les personnes qui se disaient « je suis excité » avant de parler en public étaient jugées meilleures que celles qui essayaient de se calmer. Le stress et l’excitation se ressemblent : renomme-le."},
+ {id:"ah3",th:"humain",e:"🐢",t:"Procrastiner, ce n’est pas être paresseux",b:"Pour beaucoup de chercheurs, la procrastination est d’abord une façon d’éviter une émotion désagréable liée à la tâche : peur de mal faire, ennui, flou. Rends la tâche plus petite et plus claire, et l’envie de fuir baisse."},
+ {id:"ah4",th:"humain",e:"🌪️",t:"Désamorcer une pensée catastrophe",b:"Une technique issue des thérapies cognitives et comportementales.",steps:["Quel est le pire scénario ?","Quel est le scénario le plus probable ?","Si le pire arrivait, que ferais-tu concrètement ?","Quelle petite action peux-tu faire maintenant ?"]},
+ {id:"ah5",th:"humain",e:"💬",t:"Face à quelqu’un d’angoissé, ne rassure pas trop vite",b:"« Ça va aller » ferme souvent la conversation. Reformule plutôt ce que tu entends : « Vous avez peur que ça fasse mal ? » La personne se sent comprise, et c’est ça qui fait baisser l’angoisse. Valable avec un patient comme avec un pote."},
+ {id:"ah6",th:"humain",e:"🗓️",t:"Utilise les nouveaux départs",b:"Un lundi, un début de mois, une rentrée, un anniversaire : les chercheurs ont montré qu’on est plus motivé à ces moments-là. Si tu veux changer une habitude, cale le démarrage sur un de ces repères."},
+ {id:"ah7",th:"humain",e:"😌",t:"Après une conversation, l’autre t’apprécie plus que tu ne crois",b:"C’est le « liking gap » : après avoir discuté avec un inconnu, on sous-estime systématiquement combien il nous a appréciés. Ton impression d’avoir été bizarre est souvent fausse."},
+ {id:"ah8",th:"humain",e:"🫶",t:"La bienveillance envers soi motive plus que l’autocritique",b:"Après un échec, des étudiants invités à se traiter avec compréhension ont ensuite travaillé plus longtemps pour progresser que ceux qui s’étaient juste remonté le moral. Se parler comme à un ami n’est pas se trouver des excuses."},
+ {id:"ah9",th:"humain",e:"🤐",t:"Chacun croit être le seul à douter",b:"Comme personne ne parle de ses doutes, tout le monde a l’air sûr de lui : c’est l’ignorance pluraliste. Souvent, il suffit qu’une personne ose le dire pour que les autres suivent."},
+ {id:"ah10",th:"humain",e:"⏳",t:"On regrette surtout ce qu’on n’a pas fait",b:"À court terme, on regrette nos erreurs. Avec les années, ce sont les occasions manquées qui pèsent le plus. Un argument de plus pour tenter le truc qui te fait peur."},
+ {id:"ah11",th:"humain",e:"📞",t:"Si ça ne va pas, tu peux en parler",b:"Le Fil Santé Jeunes répond gratuitement et anonymement aux 12-25 ans au 0 800 235 236. Parler à quelqu’un de confiance, un proche ou un professionnel, c’est déjà alléger le poids."},
+ // ---------- SAVOIR-FAIRE
+ {id:"as1",th:"savoir",e:"🍝",t:"L’eau des pâtes est un ingrédient",b:"Elle est chargée d’amidon, qui lie la matière grasse et l’eau de ta sauce. Garde une louche avant d’égoutter, finis la cuisson des pâtes 1 minute dans la sauce avec un peu de cette eau : sauce nappante, plus aqueuse."},
+ {id:"as2",th:"savoir",e:"🥩",t:"Pour bien saisir : poêle très chaude, viande sèche",b:"La croûte dorée vient de la réaction de Maillard, qui ne démarre bien qu’au-delà de 140 °C environ. Sèche la viande avec du papier, ne surcharge pas la poêle et ne la bouge pas pendant les premières minutes."},
+ {id:"as3",th:"savoir",e:"🧂",t:"Sale ta viande longtemps à l’avance",b:"Salée au moins 40 minutes avant, ou la veille au frigo, la viande réabsorbe son jus salé : plus juteuse et assaisonnée à cœur. Salée juste avant la cuisson, c’est bien aussi. Entre les deux, elle rend de l’eau."},
+ {id:"as4",th:"savoir",e:"🍚",t:"Le riz cuit, plus dangereux qu’on croit",b:"Une bactérie, Bacillus cereus, survit à la cuisson et produit des toxines à température ambiante. Mets le riz au frigo dans l’heure qui suit, et mange-le dans les 24 h. Réchauffe-le bien chaud, une seule fois."},
+ {id:"as5",th:"savoir",e:"🍛",t:"Le dahl de lentilles corail, protéiné et pas cher",b:"Prêt en 25 minutes, se garde 3 jours au frigo.",steps:["Fais revenir un oignon avec du curry","Ajoute 200 g de lentilles corail rincées","Une boîte de tomates concassées et une de lait de coco","20 min à feu doux en remuant, sel, citron"]},
+ {id:"as6",th:"savoir",e:"🧊",t:"Congèle à plat, décongèle en 20 minutes",b:"Mets restes, sauces ou viande hachée en sachet congélation, aplatis avant de fermer. Ça se range comme des livres et ça décongèle bien plus vite qu’un bloc."},
+ {id:"as7",th:"savoir",e:"🔌",t:"Le disjoncteur saute : trouver le coupable",b:"Débranche tout sur le circuit, réenclenche, puis rebranche les appareils un par un. Celui qui fait sauter le disjoncteur est le coupable. Si c’est l’interrupteur différentiel qui saute souvent, pense humidité ou appareil défectueux."},
+ {id:"as8",th:"savoir",e:"🩸",t:"Une tache de sang : eau froide, jamais chaude",b:"L’eau chaude cuit les protéines du sang et fixe la tache dans les fibres. Rince à l’eau froide le plus vite possible, frotte avec du savon. Utile pour les tenues de stage."},
+ {id:"as9",th:"savoir",e:"🚰",t:"Évier bouché : le siphon d’abord",b:"Avant les produits, dévisse le siphon sous l’évier avec une bassine dessous : le bouchon est très souvent juste là. Les déboucheurs chimiques abîment les canalisations et brûlent la peau."},
+ {id:"as10",th:"savoir",e:"📲",t:"SMS « colis », « ameli », « CPF » : le réflexe",b:"Ne clique jamais sur le lien. Ouvre toi-même l’appli ou le site officiel pour vérifier. Aucun organisme sérieux ne te demande tes coordonnées bancaires par SMS."},
+ // ---------- UTILE
+ {id:"au1",th:"utile",e:"⏱️",t:"Tu n’arrives pas à commencer ? La règle des 5 minutes",b:"Dis-toi : « Je fais 5 minutes, après j’ai le droit d’arrêter. » Le blocage est au démarrage, pas pendant. Une fois lancé, tu continues presque toujours."},
+ {id:"au2",th:"utile",e:"📝",t:"La feuille blanche bat la relecture",b:"Ferme ton cours et écris tout ce dont tu te souviens, puis compare. Ce que tu as oublié, c’est exactement ce qu’il faut revoir. C’est l’effet de test, l’une des méthodes les plus solides de la recherche sur l’apprentissage."},
+ {id:"au3",th:"utile",e:"🔀",t:"Mélange les chapitres quand tu t’entraînes",b:"Faire des exercices de plusieurs chapitres mélangés semble plus dur, mais t’apprend à reconnaître quel type de problème tu as en face. Exemple : mélanger les questions de scinti osseuse, rénale et pulmonaire."},
+ {id:"au4",th:"utile",e:"🃏",t:"Anki : la révision espacée en automatique",b:"Tu crées des cartes question-réponse, l’appli te les remontre juste avant que tu les oublies. 15 minutes par jour suffisent à garder un semestre entier en tête. Idéal pour les traceurs, doses et contre-indications."},
+ {id:"au5",th:"utile",e:"📵",t:"Ton téléphone te déconcentre même éteint",b:"Une étude a montré que la simple présence du téléphone sur le bureau réduit les performances. Quand tu bosses, mets-le dans une autre pièce."},
+ {id:"au6",th:"utile",e:"🔑",t:"Ta caution doit revenir sous 1 mois",b:"Si l’état des lieux de sortie est conforme à celui d’entrée, le propriétaire a 1 mois pour te rendre le dépôt de garantie, 2 mois sinon. Au-delà, il te doit des pénalités. Fais des photos datées le jour de l’entrée."},
+ {id:"au7",th:"utile",e:"🧾",t:"Ta gratification de stage n’est pas imposable",b:"Elle est exonérée d’impôt sur le revenu dans la limite du montant annuel du SMIC. Pense quand même à la déclarer si tu fais ta propre déclaration."},
+ {id:"au8",th:"utile",e:"👨‍👩‍👦",t:"Rattaché ou déclaration seul : fais les deux calculs",b:"Étudiant de moins de 25 ans, tu peux rester rattaché au foyer fiscal de tes parents ou déclarer seul. Selon les revenus de chacun, l’un est plus avantageux, et ça peut aussi jouer sur les bourses et l’APL. Le simulateur d’impots.gouv.fr permet de comparer."},
+ {id:"au9",th:"utile",e:"🏠",t:"Étudiant ? Fais ta simulation APL",b:"Même avec peu de revenus, tu as souvent droit à une aide au logement de la CAF. La simulation se fait en quelques minutes sur caf.fr, et l’aide n’est pas rétroactive : mieux vaut la demander dès l’entrée dans le logement."},
+ {id:"au10",th:"utile",e:"✉️",t:"Le mail de demande de stage qui obtient une réponse",b:"Court, précis, facile à transférer au cadre du service.",steps:["Objet : Demande de stage – MERM 2e année – dates","Qui tu es : formation, école, année","Ce que tu demandes : service, dates exactes","Remerciement, CV en PDF, coordonnées"]}
+];
+
+const QUIZ = [
+ {id:"aqm1",th:"manip",q:"Pour diviser le bruit par 2 en scanner, il faut multiplier les mAs par…",o:["2","4","8"],a:1,x:"Le bruit varie comme 1/√mAs."},
+ {id:"aqm2",th:"manip",q:"Le repliement en IRM se produit dans la direction…",o:["De codage de fréquence","De codage de phase","De sélection de coupe"],a:1,x:"D’où le suréchantillonnage en phase."},
+ {id:"aqm3",th:"manip",q:"Du technétium libre va se fixer sur…",o:["Le foie et la rate","La thyroïde et l’estomac","Le squelette"],a:1,x:"Thyroïde, estomac et glandes salivaires."},
+ {id:"aqm4",th:"manip",q:"Pour une scinti rénale dynamique avec test au furosémide, tu utilises…",o:["Le DMSA","Le MAG3"],a:1,x:"Le MAG3 est sécrété par les tubules : idéal pour le drainage."},
+ {id:"aqv1",th:"volley",q:"Après la passe adverse, le contreur regarde…",o:["Le ballon jusqu’au contact","L’attaquant"],a:1,x:"Ballon, passeur, ballon, attaquant."},
+ {id:"aqv2",th:"volley",q:"Passe haute du fond, contre à trois bien formé. Ta priorité ?",o:["Frapper fort quand même","Mettre la défense en difficulté sans faire la faute"],a:1,x:"Hors système, on garde le ballon en jeu intelligemment."},
+ {id:"aqh1",th:"humain",q:"Avant un oral stressant, quelle phrase aide le plus ?",o:["« Calme-toi »","« Je suis excité »"],a:1,x:"Renommer le stress en excitation améliore la performance."},
+ {id:"aqs1",th:"savoir",q:"Riz cuit : délai max avant le frigo ?",o:["1 heure","6 heures","Une nuit"],a:0,x:"Au frigo dans l’heure, à cause de Bacillus cereus."},
+ {id:"aqu1",th:"utile",q:"État des lieux de sortie conforme : la caution doit revenir sous…",o:["1 mois","2 mois","3 mois"],a:0,x:"1 mois si conforme, 2 mois sinon."}
+];
+const UES = {irm:"IRM", scanner:"Scanner", radio:"Radio conv", mednuc:"Méd. nucléaire", radiopharma:"Radiopharmacie", pdc:"Produits de contraste", radioprot:"Radioprotection", soin:"Relation de soin"};
+const PATCH = {am1:{ue:"irm",viz:"aliasing"},am2:{ue:"irm"},am3:{ue:"irm"},am4:{ue:"irm"},am5:{ue:"scanner",viz:"bruit"},am6:{ue:"pdc"},am7:{ue:"scanner",viz:"bolus"},am8:{ue:"scanner"},am9:{ue:"pdc",src:"Recommandations ESUR"},am10:{ue:"mednuc"},am11:{ue:"mednuc"},am12:{ue:"radiopharma"},am13:{ue:"radiopharma"},am14:{ue:"radioprot"},am15:{ue:"irm"},
+ av1:{viz:"blockout"},av2:{viz:"seam"},av4:{viz:"angle"},av5:{viz:"flottant"},av6:{viz:"transition"},
+ ah2:{src:"Brooks, 2014"},ah1:{src:"Gollwitzer & Sheeran, 2006"},ah6:{src:"Dai, Milkman & Riis, 2014"},ah7:{src:"Boothby et al., 2018"},ah8:{src:"Breines & Chen, 2012"},ah10:{src:"Gilovich & Medvec, 1995"},
+ au5:{src:"Ward et al., 2017"},au6:{src:"Loi du 6 juillet 1989"}};
+CARDS.forEach(c=>Object.assign(c,PATCH[c.id]||{}));
+
+const EXTRA = [
+ // ===== IRM
+ {id:"bm1",th:"manip",ue:"irm",viz:"t1t2",e:"📈",t:"TR et TE : la pondération en une phrase",b:"TR court et TE court : T1. TR long et TE long : T2. TR long et TE court : densité de protons. Le TR joue sur la repousse longitudinale, le TE sur la décroissance transversale."},
+ {id:"bm2",th:"manip",ue:"irm",viz:"larmor",e:"🌀",t:"La fréquence de Larmor, à connaître par cœur",b:"Les protons précessent à environ 42,6 MHz par tesla : 64 MHz à 1,5 T, 128 MHz à 3 T. L’impulsion RF doit être exactement à cette fréquence pour basculer l’aimantation : c’est la résonance."},
+ {id:"bm3",th:"manip",ue:"irm",e:"🧠",t:"FLAIR : un T2 où le LCR devient noir",b:"C’est une inversion-récupération avec un TI long, choisi pour annuler le signal du liquide céphalorachidien. Les lésions au contact des ventricules, invisibles en T2 classique, ressortent alors en hypersignal."},
+ {id:"bm4",th:"manip",ue:"irm",e:"🚫",t:"STIR : jamais après le gadolinium",b:"Le STIR annule les tissus dont le T1 est court, comme la graisse, grâce à un TI court. Il est robuste face aux inhomogénéités de champ. Mais le gadolinium raccourcit aussi le T1 : le tissu rehaussé serait annulé lui aussi."},
+ {id:"bm5",th:"manip",ue:"irm",e:"🥓",t:"Fat sat spectrale ou Dixon ?",b:"Eau et graisse résonnent à 3,5 ppm d’écart, environ 220 Hz à 1,5 T. La fat sat spectrale vise cette fréquence mais rate dès que le champ est inhomogène (cou, métal). Le Dixon calcule eau et graisse séparément : bien plus robuste."},
+ {id:"bm6",th:"manip",ue:"irm",e:"🌗",t:"Le liseré noir et blanc aux interfaces eau-graisse",b:"C’est le déplacement chimique : graisse et eau sont décalées l’une par rapport à l’autre dans la direction de codage de fréquence. Augmenter la bande passante réduit ce décalage, au prix d’un peu de signal."},
+ {id:"bm7",th:"manip",ue:"irm",e:"👻",t:"Les images fantômes suivent la direction de phase",b:"Tout ce qui bouge (respiration, aorte, déglutition) crée des répliques dans la direction de codage de phase. Solutions : changer la direction de phase, bandes de saturation, synchronisation respiratoire ou cardiaque."},
+ {id:"bm8",th:"manip",ue:"irm",e:"💧",t:"Diffusion : vérifie toujours l’ADC",b:"Une vraie restriction (AVC aigu, abcès, tumeur très cellulaire) est en hypersignal en diffusion avec un ADC bas. Hypersignal en diffusion mais ADC normal ou élevé : c’est l’effet T2 shine-through, pas une restriction."},
+ {id:"bm9",th:"manip",ue:"irm",e:"🔥",t:"Brûlures RF : casse toutes les boucles",b:"Mains jointes, mollets qui se touchent, câble enroulé : ce sont des boucles conductrices où la RF induit du courant. Coussins isolants entre les zones de contact, câbles droits sans toucher la peau."},
+ {id:"bm10",th:"manip",ue:"irm",e:"🧲",t:"L’aimant n’est jamais éteint",b:"Un aimant supraconducteur garde son champ en permanence, même machine à l’arrêt, la nuit ou pendant le ménage. Le contrôle d’accès en zone IV s’applique donc 24 h sur 24."},
+ {id:"bm11",th:"manip",ue:"irm",e:"🧷",t:"Valve de dérivation programmable : contrôle après IRM",b:"Le champ magnétique peut modifier le réglage de certaines valves de dérivation ventriculaire. On vérifie le modèle avant, et le réglage est contrôlé après l’examen selon les consignes du fabricant."},
+ {id:"bm12",th:"manip",ue:"irm",e:"📶",t:"Doubler les acquisitions ne double pas le signal",b:"Le rapport signal sur bruit augmente comme la racine du nombre d’excitations. Passer de 1 à 4 NEX multiplie le temps par 4 pour un SNR seulement doublé."},
+ {id:"bm13",th:"manip",ue:"irm",e:"🧊",t:"Coupe deux fois plus fine, SNR divisé par 2",b:"Le signal est proportionnel au volume du voxel. Affiner la coupe ou augmenter la matrice améliore la résolution mais coûte du signal : il faut compenser par du temps ou une meilleure antenne."},
+ {id:"bm14",th:"manip",ue:"irm",e:"📡",t:"L’antenne au plus près, toujours",b:"Le signal capté chute vite avec la distance. Une antenne de surface bien plaquée sur la zone donne bien plus de SNR qu’une antenne corps entier : c’est souvent le réglage le plus rentable."},
+ {id:"bm15",th:"manip",ue:"irm",e:"🤰",t:"Grossesse et IRM",b:"Aucun effet nocif n’a été démontré, mais une IRM non urgente est souvent reportée après le premier trimestre. Le gadolinium est évité sauf nécessité absolue, car il traverse le placenta."},
+ // ===== SCANNER
+ {id:"bm16",th:"manip",ue:"scanner",viz:"fenetre",e:"🎚️",t:"Les fenêtres de base",b:"Parties molles : niveau autour de 40, largeur autour de 400. Poumon : niveau vers −600, largeur vers 1500. Os : niveau de quelques centaines, largeur très large. Les valeurs varient un peu selon les services."},
+ {id:"bm17",th:"manip",ue:"scanner",e:"🧮",t:"CTDIvol, DLP, dose efficace",b:"Le CTDIvol est la dose moyenne dans le volume d’une coupe, en mGy. Le DLP le multiplie par la longueur explorée, en mGy·cm. Dose efficace ≈ DLP × un coefficient selon la région, environ 0,015 pour l’abdomen adulte."},
+ {id:"bm18",th:"manip",ue:"scanner",e:"🎯",t:"Patient décentré = plus de dose et plus de bruit",b:"Le filtre papillon et la modulation automatique des mA supposent un patient centré dans l’anneau. Trop haut ou trop bas sur la table, la dose et le bruit augmentent. Centrer, c’est déjà optimiser."},
+ {id:"bm19",th:"manip",ue:"scanner",e:"🙌",t:"Le topogramme règle la modulation de dose",b:"La modulation des mA est calculée sur le topogramme. Bras le long du corps sur un thorax-abdomen : stries, mA qui s’envolent et dose inutile. On lève les bras avant le topo, pas après."},
+ {id:"bm20",th:"manip",ue:"scanner",e:"🌀",t:"Le pitch",b:"Avancement de la table par rotation divisé par la largeur de collimation. À mAs par rotation constants, un pitch plus élevé réduit la dose et la durée d’acquisition, au prix de plus de bruit."},
+ {id:"bm21",th:"manip",ue:"scanner",e:"🔪",t:"Filtre dur ou filtre mou",b:"Le filtre dur rend les contours nets mais augmente le bruit : os, poumon. Le filtre mou lisse l’image : parties molles, cerveau. Même acquisition, deux reconstructions, deux usages."},
+ {id:"bm22",th:"manip",ue:"scanner",e:"🧱",t:"Effet de volume partiel",b:"Une structure plus fine que la coupe voit sa densité moyennée avec celle de ce qui l’entoure. Un petit nodule ou un fin trait de fracture peut disparaître. Solution : reconstruire en coupes fines."},
+ {id:"bm23",th:"manip",ue:"scanner",e:"🧑‍💻",t:"Reconstruction itérative",b:"Elle réduit le bruit bien mieux que la rétroprojection filtrée, ce qui permet de baisser la dose. Poussée trop fort, l’image prend un aspect lisse et « plastique » qui peut gêner les radiologues."},
+ // ===== PDC
+ {id:"bm24",th:"manip",ue:"pdc",e:"🦐",t:"Allergie aux fruits de mer ≠ allergie à l’iode",b:"L’iode n’est pas un allergène. Une allergie aux fruits de mer ne prédit pas de réaction au produit de contraste iodé. Ce qui compte : un antécédent de réaction à un produit de contraste."},
+ {id:"bm25",th:"manip",ue:"pdc",e:"🔄",t:"Antécédent de réaction : on change de molécule",b:"Après une réaction à un produit de contraste iodé, la mesure clé est d’utiliser une autre molécule, idéalement guidée par un bilan allergologique. La prémédication systématique n’a pas fait la preuve de son efficacité."},
+ {id:"bm26",th:"manip",ue:"pdc",e:"💉",t:"Angioscanner : débit, cathéter, flush",b:"Débit souvent de 4 à 5 mL/s, sur un cathéter de bon calibre au pli du coude. Le flush de sérum physiologique pousse le bolus et limite l’artefact de produit concentré dans la veine sous-clavière."},
+ {id:"bm27",th:"manip",ue:"pdc",e:"🫗",t:"Extravasation : les bons réflexes",b:"Arrêter l’injection, prévenir le médecin, surélever le membre, délimiter la zone au feutre et surveiller. Gros volume, douleur intense, troubles sensitifs ou de la circulation : avis chirurgical. Et toujours tracer l’incident."},
+ {id:"bm28",th:"manip",ue:"pdc",e:"🩺",t:"Gadolinium : préférer les macrocycliques",b:"La fibrose néphrogénique systémique est survenue surtout avec certains agents linéaires chez des insuffisants rénaux sévères. Aujourd’hui on privilégie les agents macrocycliques, à la plus faible dose utile."},
+ // ===== RADIO CONV
+ {id:"bm29",th:"manip",ue:"radio",e:"🎛️",t:"kV pour le contraste, mAs pour la quantité",b:"Augmenter les kV rend le faisceau plus pénétrant mais diminue le contraste. Les mAs règlent le nombre de photons, donc l’exposition, sans changer la pénétration."},
+ {id:"bm30",th:"manip",ue:"radio",e:"➕",t:"La règle des 15 %",b:"Augmenter les kV d’environ 15 % produit à peu près le même noircissement que doubler les mAs. Utile pour raccourcir le temps de pose sur un patient qui bouge, au prix d’un peu de contraste."},
+ {id:"bm31",th:"manip",ue:"radio",e:"🫀",t:"Thorax de face à 1,80 m, en PA",b:"Une grande distance foyer-détecteur rend le faisceau presque parallèle et limite l’agrandissement. En postéro-antérieur, le cœur est contre le détecteur : sa taille est évaluée plus fidèlement."},
+ {id:"bm32",th:"manip",ue:"radio",e:"⚖️",t:"L’effet talon",b:"L’intensité du faisceau est plus forte du côté cathode que du côté anode. On place la partie la plus épaisse côté cathode, par exemple la partie haute du rachis thoracique ou la cuisse sur un fémur."},
+ {id:"bm33",th:"manip",ue:"radio",e:"🧇",t:"La grille antidiffusante, à partir d’une certaine épaisseur",b:"Elle absorbe le rayonnement diffusé qui dégrade le contraste, mais oblige à augmenter l’exposition. On l’utilise sur les régions épaisses, au-delà d’une dizaine de centimètres, pas sur une main."},
+ // ===== MED NUC
+ {id:"bm34",th:"manip",ue:"mednuc",e:"❤️",t:"Perfusion myocardique : réversible ou fixe",b:"Un défaut de perfusion à l’effort qui disparaît au repos évoque une ischémie. Un défaut présent à l’effort et au repos évoque plutôt une séquelle de nécrose."},
+ {id:"bm35",th:"manip",ue:"mednuc",e:"🎯",t:"Ganglion sentinelle",b:"On injecte des colloïdes marqués au technétium près de la tumeur. Ils migrent par les lymphatiques jusqu’au premier relais ganglionnaire, que le chirurgien repère ensuite avec une sonde de détection."},
+ {id:"bm36",th:"manip",ue:"mednuc",e:"🔬",t:"Iode 123 ou iode 131 ?",b:"L’iode 123 est un émetteur gamma de demi-vie 13 h : idéal pour l’imagerie. L’iode 131 émet aussi des bêtas et a une demi-vie d’environ 8 jours : c’est l’isotope de la thérapie."},
+ {id:"bm37",th:"manip",ue:"mednuc",e:"🪟",t:"La fenêtre en énergie",b:"Pour le technétium, la gamma-caméra ne garde que les photons proches du pic de 140 keV, dans une fenêtre d’environ 15 à 20 %. Les photons diffusés, qui ont perdu de l’énergie, sont rejetés."},
+ {id:"bm38",th:"manip",ue:"mednuc",e:"🧲",t:"Le gallium 67 vient d’un cyclotron",b:"Contrairement au technétium issu d’un générateur, le gallium 67 est produit en cyclotron. Sa demi-vie d’environ 3,3 jours permet de le livrer et d’imager plusieurs jours après l’injection."},
+ // ===== RADIOPHARMA
+ {id:"bm39",th:"manip",ue:"radiopharma",viz:"generateur",e:"🐄",t:"Le générateur : un équilibre transitoire",b:"Le molybdène 99 (demi-vie 66 h) se désintègre en technétium 99m (6 h). Comme le parent vit plus longtemps que le fils, ils atteignent un équilibre transitoire. Après une élution, le technétium remonte et culmine vers 23 h."},
+ {id:"bm40",th:"manip",ue:"radiopharma",e:"🧾",t:"Le test du molybdène dans l’éluat",b:"On vérifie qu’il n’y a pas de molybdène 99 dans l’éluat de technétium. La Pharmacopée européenne fixe la limite à 0,1 % de l’activité, soit 1 kBq de molybdène par MBq de technétium."},
+ {id:"bm41",th:"manip",ue:"radiopharma",e:"📟",t:"Activimètre : constance tous les jours",b:"Chaque jour, on mesure une source de référence à longue demi-vie, souvent du césium 137, pour vérifier que l’appareil donne toujours la même valeur. La linéarité et l’exactitude sont contrôlées moins souvent."},
+ {id:"bm42",th:"manip",ue:"radiopharma",e:"⏳",t:"10 demi-vies : il reste environ 1/1000",b:"2 puissance 10 vaut 1024. Après 10 périodes, l’activité est divisée par environ mille. C’est le repère utilisé pour la gestion par décroissance des déchets à vie courte."},
+ {id:"bm43",th:"manip",ue:"radiopharma",e:"🧤",t:"Protège-seringue et bague",b:"Le protège-seringue en tungstène réduit fortement la dose aux doigts, l’endroit le plus exposé en préparation. La bague dosimétrique mesure cette dose aux extrémités."},
+ // ===== RADIOPROT
+ {id:"bm44",th:"manip",ue:"radioprot",viz:"inverse",e:"📏",t:"Double la distance, divise la dose par 4",b:"Pour une source ponctuelle, le débit de dose suit l’inverse du carré de la distance. Reculer d’un pas pendant une scopie ou une injection, c’est l’une des protections les plus efficaces et les plus gratuites."},
+ {id:"bm45",th:"manip",ue:"radioprot",e:"🎨",t:"Les couleurs du trèfle",b:"Bleu : zone surveillée. Vert : zone contrôlée. Jaune, orange, rouge : zones contrôlées spécialement réglementées, d’accès de plus en plus restreint, rouge étant interdite."},
+ {id:"bm46",th:"manip",ue:"radioprot",e:"📛",t:"Dosimètre passif et dosimètre opérationnel",b:"Le passif mesure ta dose cumulée sur une période. L’opérationnel, obligatoire en zone contrôlée, affiche la dose en temps réel et peut alarmer. Ce sont deux outils complémentaires."},
+ {id:"bm47",th:"manip",ue:"radioprot",e:"👶",t:"Travailleuse enceinte : 1 mSv pour l’enfant",b:"Dès la déclaration de grossesse, l’exposition de l’enfant à naître doit rester inférieure à 1 mSv jusqu’à la naissance. Le poste de travail est adapté en conséquence."},
+ {id:"bm48",th:"manip",ue:"radioprot",e:"📋",t:"20 mSv par an",b:"C’est la limite de dose efficace sur 12 mois consécutifs pour les travailleurs exposés en France. Pour le public, c’est 1 mSv par an, hors exposition médicale et naturelle."},
+ // ===== SOIN
+ {id:"bm49",th:"manip",ue:"soin",e:"🪪",t:"Identitovigilance : des questions ouvertes",b:"Demande « Pouvez-vous me dire votre nom, prénom et date de naissance ? » plutôt que « Vous êtes bien M. Martin ? ». Un patient stressé, sourd ou désorienté répond oui à tout."},
+ {id:"bm50",th:"manip",ue:"soin",e:"🤐",t:"« Vous voyez quelque chose ? »",b:"Ce n’est pas au manipulateur d’annoncer un résultat. Une réponse honnête et rassurante : « C’est le radiologue qui interprète les images, il vous expliquera. » Sans mimique inquiète devant l’écran."},
+ {id:"bm51",th:"manip",ue:"soin",e:"😰",t:"Patient claustrophobe en IRM",b:"Explique le déroulé, montre la poire d’appel, propose les pieds en premier si l’examen le permet, un masque sur les yeux, de la musique. Parle-lui entre les séquences : savoir combien de temps il reste aide énormément."},
+ {id:"bm52",th:"manip",ue:"soin",e:"🗣️",t:"Patient agressif : désamorcer",b:"Garde une distance de sécurité et une sortie dégagée, baisse le ton et le débit, nomme l’émotion (« Je vois que l’attente vous agace »). Pas de contact physique, et appelle de l’aide sans attendre si ça monte."},
+ // ===== VOLLEY
+ {id:"bv1",th:"volley",e:"🏹",t:"L’armé de l’arc",b:"Au décollage, le bras non frappeur pointe vers le ballon, le bras frappeur monte coude haut, main près de l’oreille. Le tronc est tourné : c’est sa rotation qui donne la vitesse, pas seulement le bras."},
+ {id:"bv2",th:"volley",e:"🔝",t:"Le topspin, c’est la main qui enveloppe",b:"Main ouverte et souple, le poignet bascule vers l’avant au contact. Le ballon prend une rotation avant et plonge grâce à l’effet Magnus : tu peux frapper plus fort sans qu’il sorte."},
+ {id:"bv3",th:"volley",e:"🍃",t:"Pourquoi le flottant flotte",b:"Sans rotation, l’air décroche de façon irrégulière autour du ballon, d’un côté puis de l’autre. Les forces changent de sens en vol et la trajectoire zigzague, surtout quand le ballon ralentit."},
+ {id:"bv4",th:"volley",e:"🪂",t:"Le jump float",b:"Lancer bas et devant, petit élan, frappe courte au centre du ballon et main qui s’arrête net. Le point de frappe plus haut donne une trajectoire plus tendue, plus difficile à lire qu’un flottant au sol."},
+ {id:"bv5",th:"volley",e:"🛡️",t:"Couvre ton attaquant",b:"Quand un coéquipier attaque, descends bas autour de lui, à 1-2 m, bras prêts. La majorité des ballons contrés retombent près de l’attaquant : c’est un point sauvé presque gratuit."},
+ {id:"bv6",th:"volley",e:"🔁",t:"Le replay : jouer le contre exprès",b:"Passe trop serrée et contre bien en place : pousse doucement le ballon dans le contre pour qu’il revienne dans ton camp. Ton équipe récupère et relance une attaque en système."},
+ {id:"bv7",th:"volley",e:"📏",t:"Passe décollée du filet : vise le fond",b:"Plus tu frappes loin du filet, moins tu as d’angle vers le bas. Cherche le fond du terrain et les zones profondes avec du topspin plutôt que de forcer une frappe courte qui finira dans le filet."},
+ {id:"bv8",th:"volley",e:"👐",t:"Ballon reçu sur le côté : baisse l’épaule extérieure",b:"Quand le ballon arrive à l’extérieur de ton corps, abaisse l’épaule la plus éloignée de la cible pour incliner la plateforme vers la passeuse, au lieu de tourner les bras."},
+ {id:"bv9",th:"volley",e:"⚡",t:"Le petit saut au moment du service adverse",b:"Un léger split step juste avant que le serveur frappe te met sur l’avant des pieds, prêt à partir dans toutes les directions. Attendre à plat, c’est perdre un temps de réaction."},
+ {id:"bv10",th:"volley",e:"🧘",t:"Focus externe : pense à la cible, pas au geste",b:"Les études sur l’apprentissage moteur montrent qu’on performe mieux en se concentrant sur l’effet recherché (« la zone 1 adverse ») qu’en pensant à son corps (« mon coude »). Garde les détails techniques pour l’entraînement."},
+ {id:"bv11",th:"volley",e:"🔥",t:"L’échauffement RAMP",b:"Raise : faire monter la température. Activate : réveiller fessiers et épaules. Mobilize : amplitude articulaire. Potentiate : quelques sauts et frappes à intensité maximale juste avant le match."},
+ {id:"bv12",th:"volley",e:"🦘",t:"Les pogo jumps pour des appuis réactifs",b:"Petits sauts rapides, jambes presque tendues, contact au sol le plus court possible. Ils entraînent la raideur de la cheville et du tendon d’Achille, utile pour l’élan et la défense."},
+ {id:"bv13",th:"volley",e:"🏖️",t:"Beach : le vent change ton service",b:"Face au vent, un flottant devient encore plus imprévisible : c’est le moment de le servir. Vent dans le dos, le ballon porte loin : sers plus tendu ou plus court pour ne pas sortir."},
+ {id:"bv14",th:"volley",e:"✊",t:"Beach : le poke et le cut",b:"En beach, la feinte main ouverte est interdite. On joue un poke avec les jointures pour passer au-dessus du contre, ou un cut shot, frappe très croisée qui retombe près du filet."},
+ {id:"bv15",th:"volley",e:"🍌",t:"Entre deux matchs de tournoi",b:"Mange des glucides faciles à digérer et bois régulièrement dès la fin du match. Reste en mouvement léger, garde-toi au chaud, et refais 5 minutes d’activation avant de reprendre."},
+ {id:"bv16",th:"volley",e:"🧍",t:"Défense : lis l’épaule de l’attaquant",b:"Position basse, poids sur l’avant des pieds, immobile au moment de la frappe. L’orientation de l’épaule et du bras de l’attaquant indique la direction. Bouger pendant la frappe, c’est se faire prendre à contre-pied."},
+ // ===== HUMAIN
+ {id:"bh1",th:"humain",e:"✍️",t:"Écrire ce qui te tracasse",b:"Écrire librement pendant 15 à 20 minutes sur ce qui te pèse, plusieurs jours de suite, a montré des effets positifs sur le bien-être dans de nombreuses études. Personne n’a besoin de le lire, même pas toi.",src:"Pennebaker"},
+ {id:"bh2",th:"humain",e:"🛏️",t:"Ta to-do de demain t’aide à t’endormir",b:"Dans une étude, les personnes qui écrivaient la liste de ce qu’elles avaient à faire le lendemain s’endormaient plus vite que celles qui notaient ce qu’elles avaient déjà fait. Vider sa tête sur papier, ça marche.",src:"Scullin et al., 2018"},
+ {id:"bh3",th:"humain",e:"❓",t:"Remplace « pourquoi » par « qu’est-ce qui »",b:"« Pourquoi tu as fait ça ? » sonne comme un reproche et met sur la défensive. « Qu’est-ce qui s’est passé ? » invite à raconter. Petite nuance, grosse différence dans une discussion tendue."},
+ {id:"bh4",th:"humain",e:"🎭",t:"Le syndrome de l’imposteur",b:"L’impression de ne pas mériter sa place et d’être un jour « démasqué » est très répandue, surtout chez les étudiants en santé. Le simple fait de savoir que les autres le ressentent aussi diminue son poids."},
+ {id:"bh5",th:"humain",e:"⏸️",t:"Le silence de 3 secondes",b:"Quand quelqu’un finit de parler, attends 3 secondes avant de répondre. Très souvent, il ajoute l’information la plus importante. Avec un patient, c’est là que sortent les vraies inquiétudes."},
+ {id:"bh6",th:"humain",e:"🔟",t:"Décider avec la règle 10/10/10",b:"Comment je me sentirai à propos de ce choix dans 10 minutes ? Dans 10 mois ? Dans 10 ans ? Ça remet la peur du moment à sa vraie place."},
+ {id:"bh7",th:"humain",e:"🔗",t:"Accroche une habitude à une autre",b:"« Après mon café, je relis une fiche. » Greffer une nouvelle habitude sur un geste que tu fais déjà tous les jours évite d’avoir à t’en souvenir."},
+ {id:"bh8",th:"humain",e:"🚶",t:"La motivation vient après l’action",b:"On attend d’être motivé pour commencer, alors que c’est souvent l’inverse : commencer crée l’élan. Le premier pas peut être ridiculement petit, l’important est qu’il existe."},
+ {id:"bh9",th:"humain",e:"🙏",t:"Trois bonnes choses",b:"Le soir, note trois choses qui se sont bien passées et pourquoi. Des études ont montré une amélioration modeste mais durable du bien-être. Ça entraîne le cerveau à repérer le positif.",src:"Seligman et al., 2005"},
+ {id:"bh10",th:"humain",e:"🏥",t:"Premier jour de stage : 3 questions qui changent tout",b:"« Comment vous préférez que je participe ? » « Qu’est-ce qui serait utile que je sache faire d’ici la fin de la semaine ? » « Je peux vous demander un retour vendredi ? » Tu passes d’observateur à membre de l’équipe."},
+ {id:"bh11",th:"humain",e:"🌧️",t:"Après une prise en charge difficile, parles-en",b:"Un décès, un enfant qui pleure, un patient agressif : en parler à un collègue ou à ton tuteur n’est pas un signe de fragilité. Les équipes qui débriefent les moments durs tiennent mieux dans la durée."},
+ {id:"bh12",th:"humain",e:"🌳",t:"10 minutes de marche quand ça ne va pas",b:"Une courte marche, idéalement dehors, améliore l’humeur de façon mesurable. Ça ne règle pas le problème, mais ça le rend souvent plus facile à regarder."},
+ // ===== SAVOIR-FAIRE
+ {id:"bs1",th:"savoir",e:"🥗",t:"La vinaigrette qui ne se sépare pas",b:"Une part de vinaigre pour trois d’huile. La moutarde est l’émulsifiant : mets-la avec le vinaigre et le sel, puis ajoute l’huile en filet en fouettant. Le sel ne se dissout pas dans l’huile : ajoute-le avant."},
+ {id:"bs2",th:"savoir",e:"🔪",t:"Le fusil n’affûte pas",b:"Il réaligne le fil du couteau, ce qui le rend plus efficace entre deux affûtages. Quand le couteau ne coupe vraiment plus, il faut une pierre ou un aiguiseur. Un couteau émoussé glisse et coupe plus les doigts."},
+ {id:"bs3",th:"savoir",e:"🧅",t:"Des oignons caramélisés, ça prend 40 minutes",b:"Feu moyen-doux, un peu de sel, on remue de temps en temps. En 10 minutes à feu vif, ils sont juste brûlés dehors et crus dedans. Si ça attache, un trait d’eau et on gratte les sucs."},
+ {id:"bs4",th:"savoir",e:"🥚",t:"Œuf frais ou pas ? Le test de l’eau",b:"Dans un verre d’eau, un œuf frais coule et reste à plat. En vieillissant, sa poche d’air grossit : il se redresse, puis flotte. Un œuf qui flotte va à la poubelle."},
+ {id:"bs5",th:"savoir",e:"🌡️",t:"Le poulet est cuit à 74 °C à cœur",b:"La couleur ne suffit pas. Un thermomètre de cuisine à quelques euros enlève tout doute, au point le plus épais, sans toucher l’os."},
+ {id:"bs6",th:"savoir",e:"❄️",t:"Décongeler au frigo, jamais sur le plan de travail",b:"À température ambiante, l’extérieur se réchauffe pendant que le centre est encore gelé : les bactéries se multiplient en surface. Au frigo la veille, ou dans l’eau froide en sachet fermé pour aller plus vite."},
+ {id:"bs7",th:"savoir",e:"🧄",t:"L’ail brûle vite",b:"Ajoute-le après l’oignon, une minute avant le reste. Brûlé, il devient amer et gâche le plat."},
+ {id:"bs8",th:"savoir",e:"🧀",t:"Moisissure : ce qu’on garde, ce qu’on jette",b:"Fromage à pâte dure : on retire 2 à 3 cm autour de la tache. Pain, confiture, yaourt, fromage frais, restes cuisinés : tout à la poubelle, les filaments invisibles vont bien plus loin que la tache."},
+ {id:"bs9",th:"savoir",e:"🚲",t:"Chaîne de vélo : moins d’huile, plus souvent",b:"Nettoie la chaîne, une goutte d’huile par maillon en tournant le pédalier, puis essuie tout l’excès. L’huile en surface attire la poussière, qui use la transmission."},
+ {id:"bs10",th:"savoir",e:"🍳",t:"Tache de graisse : avant le lavage",b:"Une goutte de liquide vaisselle frottée doucement, ou du talc pour absorber si c’est frais, avant la machine. Une fois passée au sèche-linge, la tache est presque impossible à enlever."},
+ {id:"bs11",th:"savoir",e:"🔐",t:"Un bon mot de passe est une phrase",b:"Quatre mots aléatoires forment un mot de passe long, facile à retenir et dur à casser. Ajoute un gestionnaire de mots de passe et la double authentification sur ta boîte mail : c’est elle qui protège tout le reste."},
+ {id:"bs12",th:"savoir",e:"💾",t:"La règle 3-2-1 pour tes cours",b:"3 copies de tes fichiers, sur 2 supports différents, dont 1 hors de chez toi (cloud). Un ordi qui meurt la veille des partiels, ça arrive vraiment."},
+ {id:"bs13",th:"savoir",e:"☕",t:"Détartrer la bouilloire",b:"Remplis à moitié d’eau et de vinaigre blanc ou d’acide citrique, fais chauffer, laisse agir une heure, rince plusieurs fois. Le calcaire rallonge la chauffe et donc la facture."},
+ {id:"bs14",th:"savoir",e:"🧺",t:"Draps et serviettes à 60 °C",b:"Cette température élimine la plupart des microbes et des acariens. Pour le reste du linge, 30 °C suffit et économise de l’énergie."},
+ // ===== UTILE
+ {id:"bu1",th:"utile",e:"👶",t:"La méthode Feynman",b:"Explique la notion comme à un enfant de 12 ans, sans jargon. Là où tu bloques, c’est que tu n’as pas compris. Retourne au cours sur ce point précis, puis réessaie."},
+ {id:"bu2",th:"utile",e:"🖼️",t:"Un schéma + des mots, c’est mieux que des mots seuls",b:"Associer une notion à un dessin ou un schéma crée deux chemins pour la retrouver en mémoire. Dessine la séquence d’écho de spin, le générateur ou la chaîne de détection plutôt que de recopier des phrases."},
+ {id:"bu3",th:"utile",e:"🌙",t:"La veille du partiel, dors",b:"C’est pendant le sommeil que la mémoire consolide ce que tu as appris. Une nuit blanche fait perdre plus de points qu’elle n’en fait gagner."},
+ {id:"bu4",th:"utile",e:"🗒️",t:"En examen, lis tout avant d’écrire",b:"Parcours toutes les questions d’abord, commence par ce que tu maîtrises pour prendre confiance et des points sûrs. En QCM, entoure les négations : « ne… pas », « sauf », « jamais »."},
+ {id:"bu5",th:"utile",e:"🏥",t:"Plus de sécu étudiante",b:"Depuis 2019, les étudiants sont affiliés au régime général de l’Assurance maladie. Tu n’as rien à payer pour ça : la mutuelle complémentaire, elle, reste facultative et à choisir toi-même."},
+ {id:"bu6",th:"utile",e:"🛡️",t:"L’assurance habitation est obligatoire",b:"Pour un locataire, l’assurance des risques locatifs est obligatoire, et le propriétaire peut te demander une attestation chaque année. Ça coûte quelques euros par mois pour un studio."},
+ {id:"bu7",th:"utile",e:"📦",t:"Quitter son logement : le préavis",b:"Meublé : 1 mois. Vide : 3 mois en principe, réduit à 1 mois en zone tendue et dans certains cas (premier emploi, mutation, perte d’emploi…). Envoie ta lettre en recommandé avec accusé de réception."},
+ {id:"bu8",th:"utile",e:"🤝",t:"Pas de garant ? Visale",b:"Action Logement se porte garant gratuitement pour les jeunes de 18 à 30 ans auprès du propriétaire. La demande se fait en ligne et rassure beaucoup les bailleurs."},
+ {id:"bu9",th:"utile",e:"🐖",t:"LEP plutôt que Livret A, si tu y as droit",b:"Le Livret d’épargne populaire rapporte plus que le Livret A, mais il est réservé aux revenus modestes. Beaucoup d’étudiants y ont droit sans le savoir : demande à ta banque."},
+ {id:"bu10",th:"utile",e:"📱",t:"Limite tes applis dans Bien-être numérique",b:"Sur Android, Paramètres puis Bien-être numérique : tu peux fixer une durée maximale par appli. Une fois atteinte, l’icône se grise jusqu’au lendemain."},
+ {id:"bu11",th:"utile",e:"📅",t:"Bloque tes révisions comme un rendez-vous",b:"Une plage « Révision IRM – 18 h-18 h 45 » dans ton agenda a beaucoup plus de chances d’arriver qu’un vague « je réviserai ce soir »."},
+ {id:"bu12",th:"utile",e:"🎤",t:"Entretien pour un stage : prépare 2 questions",b:"« Quels examens je pourrai réaliser en autonomie ? » « Comment se passe l’encadrement des étudiants ? » Poser des questions montre ta motivation et t’aide à choisir."},
+ {id:"bu13",th:"utile",e:"💳",t:"Fais la chasse aux abonnements",b:"Regarde tes 3 derniers relevés bancaires et liste tout ce qui revient chaque mois. Musique, streaming, applis oubliées : supprimer ce que tu n’utilises plus, c’est des économies sans effort."}
+];
+CARDS.push(...EXTRA);
+
+QUIZ.push(
+ {id:"bq1",th:"manip",ue:"irm",q:"TR long et TE court donnent une pondération…",o:["T1","T2","Densité de protons"],a:2,x:"TR long : peu de T1. TE court : peu de T2."},
+ {id:"bq2",th:"manip",ue:"irm",q:"Hypersignal en diffusion avec ADC élevé, c’est…",o:["Une restriction vraie","Un effet T2 shine-through"],a:1,x:"Une vraie restriction a un ADC bas."},
+ {id:"bq3",th:"manip",ue:"irm",q:"Pourquoi ne pas faire de STIR après gadolinium ?",o:["Il est trop long","Le tissu rehaussé serait annulé","Il chauffe trop"],a:1,x:"Le gadolinium raccourcit le T1, comme la graisse."},
+ {id:"bq4",th:"manip",ue:"scanner",q:"DLP de 500 mGy·cm sur un abdomen (k ≈ 0,015). Dose efficace ?",o:["≈ 0,75 mSv","≈ 7,5 mSv","≈ 75 mSv"],a:1,x:"500 × 0,015 = 7,5 mSv."},
+ {id:"bq5",th:"manip",ue:"pdc",q:"Un patient allergique aux crevettes doit-il éviter l’iode ?",o:["Oui, toujours","Non, ce n’est pas prédictif"],a:1,x:"L’iode n’est pas l’allergène."},
+ {id:"bq6",th:"manip",ue:"radiopharma",q:"Après 10 demi-vies, il reste environ…",o:["1/100","1/1000","1/10 000"],a:1,x:"2^10 = 1024."},
+ {id:"bq7",th:"manip",ue:"radioprot",q:"Zone verte du trèfle :",o:["Surveillée","Contrôlée","Interdite"],a:1,x:"Bleu surveillée, vert contrôlée, rouge interdite."},
+ {id:"bq8",th:"manip",ue:"radio",q:"+15 % de kV équivaut à peu près à…",o:["Doubler les mAs","Diviser les mAs par 2","Rien"],a:0,x:"C’est la règle des 15 %."},
+ {id:"bq9",th:"manip",ue:"mednuc",q:"Défaut de perfusion à l’effort, normal au repos :",o:["Ischémie","Nécrose"],a:0,x:"Réversible = ischémie."},
+ {id:"bq10",th:"volley",q:"En défense, au moment de la frappe adverse, tu dois être…",o:["En mouvement vers le ballon","Immobile et bas"],a:1,x:"Bouger pendant la frappe te met à contre-pied."},
+ {id:"bq11",th:"volley",q:"Pourquoi le topspin permet de frapper plus fort ?",o:["Le ballon va plus vite","L’effet Magnus le fait plonger"],a:1,x:"La rotation avant fait redescendre le ballon."},
+ {id:"bq12",th:"humain",q:"Quelle question met le moins sur la défensive ?",o:["« Pourquoi tu as fait ça ? »","« Qu’est-ce qui s’est passé ? »"],a:1,x:"« Qu’est-ce qui » invite à raconter."},
+ {id:"bq13",th:"savoir",q:"Un œuf flotte dans l’eau. Il est…",o:["Très frais","Vieux, à jeter"],a:1,x:"La poche d’air grossit avec le temps."},
+ {id:"bq14",th:"utile",q:"Préavis pour quitter un meublé :",o:["1 mois","2 mois","3 mois"],a:0,x:"1 mois pour un meublé."}
+);
+QUIZ.forEach(q=>{ if(q.th==="manip"&&!q.ue){ q.ue={aqm1:"scanner",aqm2:"irm",aqm3:"radiopharma",aqm4:"mednuc"}[q.id]; } });
+// ======================= état
+const SESSION = 15, INTERVALS = [1,3,7,15,30,60];
+const iso = d => d.toISOString().slice(0,10);
+const today = iso(new Date());
+const addDays = n => iso(new Date(Date.now()+n*864e5));
+const store = {get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let liked=store.get("su3-liked",[]), saved=store.get("su3-saved",[]), flagged=store.get("su3-flag",[]), gen=store.get("su3-gen",[]);
+let S=store.get("su3-srs",{}), seenEver=new Set(store.get("su3-seen",[])), dwell=store.get("su3-dwell",{});
+let stats=store.get("su3-stats",{day:"",seen:[],streak:0});
+if(stats.day!==today){const y=addDays(-1);stats.streak=(stats.day===y&&stats.seen.length)?stats.streak:0;stats.day=today;stats.seen=[];store.set("su3-stats",stats)}
+const allCards=()=>CARDS.concat(gen);
+const byId=id=>allCards().find(c=>c.id===id);
+const saveS=()=>store.set("su3-srs",S);
+
+function rng(seed){let h=0;for(const c of seed)h=Math.imul(31,h)+c.charCodeAt(0)|0;return()=>{h=h+0x6D2B79F5|0;let t=Math.imul(h^h>>>15,1|h);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function shuffle(a,s){const r=rng(s),b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
+function weight(th){const l=liked.filter(id=>{const c=byId(id);return c&&c.th===th}).length;return 1+0.35*l+Math.min(3,(dwell[th]||0)/120)}
+function wshuffle(a,s){const r=rng(s);return a.map(c=>({c,k:-Math.log(r()+1e-9)/weight(c.th)})).sort((x,y)=>x.k-y.k).map(x=>x.c)}
+
+const feed=document.getElementById("feed");
+let theme="all", ue="all", queue=[], shown=0, sample=null;
+
+// ======================= visualisations animées
+const VIZ={}, vizEls=new Set(), visible=new Set();
+const RM=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+const F=(s,w=600)=>`${w} ${s}px "Bricolage Grotesque", system-ui, sans-serif`;
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+function axes(c,x0,y0,x1,y1){c.strokeStyle="#FFFFFF55";c.lineWidth=1.5;c.beginPath();c.moveTo(x0,y0);c.lineTo(x0,y1);c.lineTo(x1,y1);c.stroke()}
+function curve(c,fn,x0,y0,x1,y1,p,col,lw=3){c.strokeStyle=col;c.lineWidth=lw;c.beginPath();const n=80;for(let i=0;i<=n*p;i++){const u=i/n;const x=x0+u*(x1-x0),y=y1-fn(u)*(y1-y0);i?c.lineTo(x,y):c.moveTo(x,y)}c.stroke()}
+function label(c,t,x,y,col="#F6F3EE",s=13,al="left"){c.fillStyle=col;c.font=F(s);c.textAlign=al;c.fillText(t,x,y)}
+function court(c,w,h){const m=14,cw=w-2*m,ch=h-2*m;c.strokeStyle="#FFFFFF66";c.lineWidth=2;c.strokeRect(m,m,cw,ch);c.strokeStyle="#FFFFFFcc";c.lineWidth=3;c.beginPath();c.moveTo(w/2,m-6);c.lineTo(w/2,h-m+6);c.stroke();c.strokeStyle="#FFFFFF44";c.lineWidth=1.5;const d=cw/6;[w/2-d,w/2+d].forEach(x=>{c.beginPath();c.moveTo(x,m);c.lineTo(x,h-m);c.stroke()});return{m,cw,ch}}
+function dot(c,x,y,r,col){c.fillStyle=col;c.beginPath();c.arc(x,y,r,0,7);c.fill()}
+function arrow(c,x0,y0,x1,y1,col,p=1,dash){c.strokeStyle=col;c.lineWidth=3;c.setLineDash(dash?[6,6]:[]);const x=x0+(x1-x0)*p,y=y0+(y1-y0)*p;c.beginPath();c.moveTo(x0,y0);c.lineTo(x,y);c.stroke();c.setLineDash([]);if(p>=1){const a=Math.atan2(y1-y0,x1-x0);c.fillStyle=col;c.beginPath();c.moveTo(x1,y1);c.lineTo(x1-12*Math.cos(a-.4),y1-12*Math.sin(a-.4));c.lineTo(x1-12*Math.cos(a+.4),y1-12*Math.sin(a+.4));c.fill()}}
+
+VIZ.t1t2=(c,w,h,t,A)=>{const p=clamp((t%7)/4);const mid=w/2;
+  axes(c,20,20,mid-16,h-28);axes(c,mid+16,20,w-12,h-28);
+  label(c,"T1 : repousse",24,16,"#F6F3EE",13);label(c,"T2 : décroissance",mid+20,16,"#F6F3EE",13);
+  curve(c,u=>1-Math.exp(-u*3000/260),20,30,mid-16,h-28,p,A);curve(c,u=>1-Math.exp(-u*3000/1500),20,30,mid-16,h-28,p,"#9FB7FF");
+  curve(c,u=>Math.exp(-u*400/80),mid+16,30,w-12,h-28,p,A);curve(c,u=>Math.exp(-u*400/700),mid+16,30,w-12,h-28,p,"#9FB7FF");
+  if(p>.6){label(c,"graisse",mid-70,48,A,12);label(c,"eau",mid-50,h-60,"#9FB7FF",12);label(c,"eau",w-50,60,"#9FB7FF",12);label(c,"graisse",mid+28,h-40,A,12)}
+  label(c,"temps",mid-16,h-10,"#FFFFFF88",11,"right");label(c,"temps",w-12,h-10,"#FFFFFF88",11,"right")};
+
+VIZ.aliasing=(c,w,h,t,A)=>{const ph=Math.floor((t%9)/3);const big=ph===2;const fw=big?w*.86:w*.56,fx=(w-fw)/2,fy=22,fh=h-50;
+  c.strokeStyle=A;c.lineWidth=2.5;c.setLineDash([7,5]);c.strokeRect(fx,fy,fw,fh);c.setLineDash([]);
+  c.fillStyle="#FFFFFF33";c.beginPath();c.ellipse(w/2,fy+fh/2,w*.2,fh*.38,0,0,7);c.fill();
+  c.fillStyle="#FFFFFF55";c.beginPath();c.ellipse(w/2+w*.31,fy+fh/2,w*.07,fh*.3,0,0,7);c.fill();
+  if(ph===1){c.fillStyle="#FF8E8E66";c.beginPath();c.ellipse(w/2+w*.31-fw,fy+fh/2,w*.07,fh*.3,0,0,7);c.fill();label(c,"le bras « replié » à gauche",w/2,h-10,"#FF8E8E",12,"center")}
+  else if(ph===0)label(c,"le bras dépasse du champ de vue",w/2,h-10,"#F6F3EE",12,"center");
+  else label(c,"FOV agrandi : plus de repliement",w/2,h-10,A,12,"center");
+  label(c,"↔ direction de phase",fx+4,fy+16,A,11)};
+
+VIZ.generateur=(c,w,h,t,A)=>{const p=clamp((t%8)/5);const x0=26,y0=24,x1=w-12,y1=h-30;axes(c,x0,y0,x1,y1);
+  const lM=Math.log(2)/66,lT=Math.log(2)/6,T=96;
+  curve(c,u=>Math.exp(-lM*u*T),x0,y0,x1,y1,p,"#9FB7FF",2.5);
+  curve(c,u=>{const tt=u*T,te=tt%24;return Math.exp(-lM*tt)*(lT/(lT-lM))*(1-Math.exp(-(lT-lM)*te))*.87},x0,y0,x1,y1,p,A,3);
+  label(c,"Mo 99",x0+8,y0+10,"#9FB7FF",12);label(c,"Tc 99m",x0+8,y0+28,A,12);
+  for(let k=1;k<4;k++){const x=x0+(k*24/T)*(x1-x0);if(p*T>k*24)label(c,"élution",x,y1-6,"#FFFFFF99",10,"center")}
+  label(c,"heures →",x1,h-10,"#FFFFFF88",11,"right")};
+
+VIZ.inverse=(c,w,h,t,A)=>{const sx=30,sy=h/2;dot(c,sx,sy,8,A);c.strokeStyle="#FFFFFF33";c.lineWidth=1.5;
+  c.beginPath();c.moveTo(sx,sy);c.lineTo(w-10,14);c.moveTo(sx,sy);c.lineTo(w-10,h-14);c.stroke();
+  const d1=w*.38,d2=w*.76;const s1=(d1-sx)*.28,s2=(d2-sx)*.28;
+  c.strokeStyle=A;c.lineWidth=2;c.strokeRect(d1-1,sy-s1/2,2,s1);c.strokeRect(d2-1,sy-s2/2,2,s2);
+  const r=rng("inv"+Math.floor(t*6));for(let i=0;i<40;i++){const u=((t*0.35+i/40)%1);const x=sx+u*(w-sx-10),a=(r()-.5)*.9;const y=sy+(x-sx)*Math.tan(a)*.55;dot(c,x,y,2.2,"#FFFFFFaa")}
+  label(c,"d → dose 1",d1,22,A,12,"center");label(c,"2d → dose 1/4",d2,22,A,12,"center");label(c,"même nombre de photons, surface ×4",w/2,h-8,"#FFFFFF99",11,"center")};
+
+VIZ.fenetre=(c,w,h,t,A)=>{const P=[["Poumon",-600,1500],["Parties molles",40,400],["Os",500,2000]];const k=(t/2.6)%3,i=Math.floor(k),f=clamp((k-i)*2.6-1.6);
+  const a=P[i],b=P[(i+1)%3];const L=a[1]+(b[1]-a[1])*f,W=a[2]+(b[2]-a[2])*f;const hu=x=>16+(x+1000)/2500*(w-32);
+  const g=c.createLinearGradient(16,0,w-16,0);g.addColorStop(0,"#000");g.addColorStop(1,"#fff");c.fillStyle=g;c.fillRect(16,40,w-32,22);
+  [-1000,0,1000].forEach(v=>label(c,String(v),hu(v),78,"#FFFFFF99",11,"center"));
+  const l=hu(L-W/2),r=hu(L+W/2);c.strokeStyle=A;c.lineWidth=3;c.strokeRect(Math.max(10,l),34,Math.min(w-10,r)-Math.max(10,l),34);
+  const g2=c.createLinearGradient(Math.max(16,l),0,Math.min(w-16,r),0);g2.addColorStop(0,"#000");g2.addColorStop(1,"#fff");c.fillStyle=g2;c.fillRect(16,110,w-32,40);
+  c.fillStyle="#000";c.fillRect(16,110,Math.max(0,l-16),40);c.fillStyle="#fff";c.fillRect(Math.min(w-16,r),110,Math.max(0,w-16-r),40);
+  label(c,(f<.5?a:b)[0]+` · niveau ${Math.round(L)} · largeur ${Math.round(W)}`,w/2,22,A,13,"center");label(c,"ce que tu vois à l’écran",w/2,h-10,"#FFFFFF99",11,"center")};
+
+VIZ.bolus=(c,w,h,t,A)=>{const x0=26,y0=20,x1=w-12,y1=h-30;axes(c,x0,y0,x1,y1);const T=110,ts=(t*14)%T,p=ts/T;
+  const ao=u=>{const s=u*T;return s<12?0:.95*Math.pow((s-12)/16,2)*Math.exp(2*(1-(s-12)/16))*0.9};const li=u=>{const s=u*T;return s<20?0:.38*Math.pow((s-20)/50,2)*Math.exp(2*(1-(s-20)/50))};
+  const ty=y1-0.45*(y1-y0);c.strokeStyle="#FFFFFF66";c.setLineDash([5,5]);c.beginPath();c.moveTo(x0,ty);c.lineTo(x1,ty);c.stroke();c.setLineDash([]);label(c,"seuil de déclenchement",x1,ty-5,"#FFFFFF99",10,"right");
+  curve(c,ao,x0,y0,x1,y1,p,"#FF8E8E");curve(c,li,x0,y0,x1,y1,p,A);
+  const xm=s=>x0+s/T*(x1-x0);[[30,"artériel"],[70,"portal"]].forEach(([s,n])=>{if(ts>s){c.strokeStyle="#FFFFFF88";c.beginPath();c.moveTo(xm(s),y0);c.lineTo(xm(s),y1);c.stroke();label(c,n+" ~"+s+" s",xm(s)+4,y0+12,"#FFFFFFcc",11)}});
+  label(c,"aorte",x0+6,y1-8,"#FF8E8E",11);label(c,"foie",x0+50,y1-8,A,11)};
+
+VIZ.larmor=(c,w,h,t,A)=>{const hi=Math.floor(t/3.5)%2===1;const B=hi?3:1.5,cx=w*.32,cy=h*.62,L=h*.48;
+  c.strokeStyle="#FFFFFF44";c.lineWidth=2;c.beginPath();c.moveTo(cx,cy+20);c.lineTo(cx,cy-L-20);c.stroke();label(c,"B0",cx+6,cy-L-10,"#FFFFFF88",12);
+  const a=t*(hi?8:4);c.strokeStyle="#FFFFFF33";c.beginPath();c.ellipse(cx,cy-L*.8,L*.45,L*.12,0,0,7);c.stroke();
+  const x=cx+Math.cos(a)*L*.45,y=cy-L*.8+Math.sin(a)*L*.12;arrow(c,cx,cy,x,y,A);dot(c,cx,cy,7,"#F6F3EE");
+  label(c,(hi?"3 T":"1,5 T"),w*.68,h*.42,"#F6F3EE",26,"center");label(c,(hi?"≈ 128 MHz":"≈ 64 MHz"),w*.68,h*.62,A,22,"center");label(c,"42,6 MHz par tesla",w*.68,h*.8,"#FFFFFF99",12,"center")};
+
+VIZ.bruit=(c,w,h,t,A)=>{const r=rng("b"+Math.floor(t*8));[[0,1,"mAs ×1"],[1,.5,"mAs ×4 · bruit ÷2"]].forEach(([k,amp,lab])=>{
+  const ox=k*w/2+12,cw=w/2-24,ch=h-46,n=26,sz=cw/n;for(let i=0;i<n;i++)for(let j=0;j<Math.floor(ch/sz);j++){const dx=(i+.5)/n-.5,dy=(j+.5)/(ch/sz)-.5;const inC=dx*dx+dy*dy<.12;let v=(inC?150:70)+(r()-.5)*170*amp;v=Math.max(0,Math.min(255,v|0));c.fillStyle=`rgb(${v},${v},${v})`;c.fillRect(ox+i*sz,14+j*sz,sz+.5,sz+.5)}
+  label(c,lab,ox+cw/2,h-10,k?A:"#F6F3EE",12,"center")})};
+
+VIZ.blockout=(c,w,h,t,A)=>{const {m}=court(c,w,h);const p=clamp((t%4)/2.2);const hx=w*.3,hy=h-m-20,bx=w/2+6,by=m+24;
+  dot(c,hx,hy,10,"#FFB066");c.fillStyle="#9FB7FF";c.fillRect(bx-4,by-14,12,44);c.fillRect(bx-4,by+40,12,44);
+  label(c,"contre",bx+14,by+50,"#9FB7FF",11);
+  if(p<.6){const u=p/.6;dot(c,hx+(bx-hx)*u,hy+(by-14-hy)*u,6,"#fff")}else{const u=(p-.6)/.4;dot(c,bx+u*(w*.45),by-14-u*(by+20),6,"#fff")}
+  if(p>=1)label(c,"touche la main extérieure → dehors",w/2,h-2,A,12,"center")};
+
+VIZ.seam=(c,w,h,t,A)=>{const {m}=court(c,w,h);const p=clamp((t%4)/2.2);const hx=w*.32,hy=h*.55;
+  dot(c,hx,hy,10,"#FFB066");c.fillStyle="#9FB7FF";c.fillRect(w/2+2,h*.22,12,46);c.fillRect(w/2+2,h*.55,12,46);
+  const gy=h*.47;arrow(c,hx,hy,w-m-30,gy-6,A,p);if(p>=1)label(c,"frappe dans le trou entre les contreurs",w/2,h-2,A,12,"center")};
+
+VIZ.angle=(c,w,h,t,A)=>{const {m,cw}=court(c,w,h);const p=clamp((t%4)/2.2);const hx=w/2-20,hy=h-m-14;
+  dot(c,hx,hy,10,"#FFB066");arrow(c,hx,hy,w/2+cw/6+6,h-m-6,A,p);arrow(c,hx,hy,w-m-10,m+20,"#FFFFFF55",1,true);
+  label(c,"angle court",w/2+cw/6+10,h-m-16,A,12);label(c,"diagonale longue",w-m-14,m+40,"#FFFFFF88",11,"right")};
+
+VIZ.flottant=(c,w,h,t,A)=>{const p=clamp((t%4)/3);c.strokeStyle="#FFFFFFcc";c.lineWidth=3;c.beginPath();c.moveTo(w/2,h-30);c.lineTo(w/2,h*.38);c.stroke();
+  c.strokeStyle=A;c.lineWidth=2.5;c.beginPath();for(let i=0;i<=100*p;i++){const u=i/100;const x=20+u*(w-40);const y=h-40-Math.sin(u*Math.PI)*(h*.55)+Math.sin(u*22)*u*u*14;i?c.lineTo(x,y):c.moveTo(x,y)}c.stroke();
+  label(c,"la trajectoire bouge surtout en fin de course",w/2,h-8,"#FFFFFF99",11,"center")};
+
+VIZ.transition=(c,w,h,t,A)=>{const m=14;c.strokeStyle="#FFFFFF66";c.lineWidth=2;c.strokeRect(m,m,w-2*m,h-2*m);c.strokeStyle="#FFFFFFcc";c.lineWidth=3;c.beginPath();c.moveTo(m-6,m);c.lineTo(w-m+6,m);c.stroke();
+  c.strokeStyle="#FFFFFF44";c.lineWidth=1.5;const y3=m+(h-2*m)*.36;c.beginPath();c.moveTo(m,y3);c.lineTo(w-m,y3);c.stroke();label(c,"filet",w/2,m-2,"#FFFFFFaa",10,"center");
+  const P=[[w*.2,m+14],[w*.06,y3+26],[w*.2,m+14]];const k=(t%5)/2.2;
+  if(k<1){arrow(c,P[0][0],P[0][1],P[1][0],P[1][1],A,clamp(k),true);dot(c,P[0][0]+(P[1][0]-P[0][0])*clamp(k),P[0][1]+(P[1][1]-P[0][1])*clamp(k),9,"#FFB066")}
+  else{arrow(c,P[0][0],P[0][1],P[1][0],P[1][1],"#FFFFFF55",1,true);const u=clamp(k-1);arrow(c,P[1][0],P[1][1],w*.24,m+20,A,u);dot(c,P[1][0]+(w*.24-P[1][0])*u,P[1][1]+(m+20-P[1][1])*u,9,"#FFB066")}
+  label(c,"1. recule en diagonale, face au jeu",w*.38,y3+10,"#FFFFFFcc",11);label(c,"2. élan complet vers le filet",w*.38,y3+30,A,11)};
+
+function vizCanvas(key,acc){const cv=document.createElement("canvas");cv.className="viz";cv.dataset.viz=key;cv.dataset.a=acc;cv.setAttribute("aria-hidden","true");vizEls.add(cv);vizObs.observe(cv);return cv}
+const vizObs=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting?visible.add(e.target):visible.delete(e.target)),{root:feed,threshold:.2});
+let t0=performance.now();
+function loop(now){visible.forEach(cv=>{if(!cv.isConnected){visible.delete(cv);return}const r=cv.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);const W=Math.round(r.width*dpr),H=Math.round(r.height*dpr);if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H}
+  const c=cv.getContext("2d");c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,r.width,r.height);try{VIZ[cv.dataset.viz](c,r.width,r.height,RM?6:(now-t0)/1000,cv.dataset.a)}catch(e){}});requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+
+// ======================= cartes
+const ICON={like:'<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-9.2-8.6C1.2 8.2 3.1 4.5 6.6 4.5c2 0 3.4 1.1 4.4 2.6 1-1.5 2.4-2.6 4.4-2.6 3.5 0 5.4 3.7 3.8 6.9C19 15.6 12 20 12 20z"/></svg>',save:'<svg viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-4-6 4z"/></svg>',share:'<svg viewBox="0 0 24 24"><path d="M4 12v7h16v-7M12 3v12M7.5 7.5 12 3l4.5 4.5"/></svg>',list:'<svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg>',flag:'<svg viewBox="0 0 24 24"><path d="M5 21V4h11l-2 4 2 4H5"/></svg>'};
+function themeVars(el,th){const T=THEMES[th];el.style.setProperty("--g1",T.g[0]);el.style.setProperty("--g2",T.g[1]);el.style.setProperty("--a",T.a)}
+function rail(c){const r=document.createElement("div");r.className="rail";
+  r.innerHTML=`<button class="rbtn like" aria-pressed="${liked.includes(c.id)}"><span class="ic">${ICON.like}</span>J’aime</button>
+  <button class="rbtn save" aria-pressed="${saved.includes(c.id)}"><span class="ic">${ICON.save}</span>Garder</button>
+  <button class="rbtn share"><span class="ic">${ICON.share}</span>Partager</button>
+  <button class="rbtn flag" aria-pressed="${flagged.includes(c.id)}"><span class="ic">${ICON.flag}</span>Erreur ?</button>
+  <button class="rbtn lst"><span class="ic">${ICON.list}</span>Ma liste</button>`;
+  r.querySelector(".like").onclick=e=>toggle("like",c.id);r.querySelector(".save").onclick=()=>toggle("save",c.id);
+  r.querySelector(".flag").onclick=()=>toggle("flag",c.id);r.querySelector(".share").onclick=()=>share(c);r.querySelector(".lst").onclick=()=>openList("saved");return r}
+function meta(c,extra=""){const T=THEMES[c.th];const u=c.ue?` · ${UES[c.ue]}`:"";return `<div class="meta"><span>${T.e}</span><b>${T.label}${u}</b>${c.ai?'<span class="tag-ai">✨ Claude</span>':""}${extra}</div>`}
+function fillBody(box,c){
+  const h=document.createElement("h2");h.textContent=c.t;const p=document.createElement("p");p.className="body";p.textContent=c.b;box.append(h,p);
+  if(c.steps&&c.steps.length){const ol=document.createElement("ol");ol.className="steps";c.steps.forEach(s=>{const li=document.createElement("li");li.textContent=s;ol.appendChild(li)});box.appendChild(ol)}
+  if(c.src){const s=document.createElement("p");s.className="src";s.textContent="Source : "+c.src;box.appendChild(s)}}
+function learnRow(c){const row=document.createElement("div");row.className="learn";const st=S[c.id]&&S[c.id].s;
+  row.innerHTML=`<button class="lb known">Je savais déjà</button><button class="lb learnb ${st==="learn"?"on":""}">${st==="learn"?"✓ En révision":"Appris !"}</button>`;
+  row.querySelector(".known").onclick=()=>{S[c.id]={s:"known"};saveS();toast("Elle ne reviendra plus");row.querySelectorAll("button").forEach(b=>b.disabled=true)};
+  row.querySelector(".learnb").onclick=e=>{if(S[c.id]&&S[c.id].s==="learn")return;S[c.id]={s:"learn",n:0,due:addDays(INTERVALS[0])};saveS();e.currentTarget.classList.add("on");e.currentTarget.textContent="✓ En révision";toast("Elle reviendra demain en révision")};
+  return row}
+function cardEl(c){const el=document.createElement("section");el.className="card";el.dataset.id=c.id;el.dataset.th=c.th;themeVars(el,c.th);
+  el.innerHTML=`<div class="content"></div>${meta(c)}`;const box=el.querySelector(".content");
+  if(c.viz&&VIZ[c.viz])box.appendChild(vizCanvas(c.viz,THEMES[c.th].a));else{const e=document.createElement("div");e.className="emoji";e.textContent=c.e||THEMES[c.th].e;box.appendChild(e)}
+  fillBody(box,c);box.appendChild(learnRow(c));el.appendChild(rail(c));
+  let last=0;el.addEventListener("click",ev=>{if(ev.target.closest("button"))return;const n=Date.now();if(n-last<300){if(!liked.includes(c.id))toggle("like",c.id);heartBurst(el,ev.clientX,ev.clientY)}last=n});
+  return el}
+function reviewEl(c){const el=document.createElement("section");el.className="card rv";el.dataset.id="rv-"+c.id;el.dataset.th=c.th;themeVars(el,c.th);
+  el.innerHTML=`<div class="content"><span class="rv-label">🔁 Révision</span><div class="emoji">${c.e||THEMES[c.th].e}</div><h2></h2><p class="body">Tu te souviens de l’explication ? Essaie de la dire dans ta tête avant de regarder.</p><button class="big show">Voir la réponse</button><div class="reveal" hidden></div><div class="learn ans" hidden><button class="lb yes">Je m’en souvenais</button><button class="lb no">J’avais oublié</button></div></div>${meta(c)}`;
+  el.querySelector("h2").textContent=c.t;const rv=el.querySelector(".reveal");
+  el.querySelector(".show").onclick=e=>{e.currentTarget.remove();el.querySelector(".body").remove();el.querySelector(".emoji").remove();if(c.viz&&VIZ[c.viz])rv.appendChild(vizCanvas(c.viz,THEMES[c.th].a));const p=document.createElement("p");p.className="body";p.textContent=c.b;rv.appendChild(p);
+    if(c.steps){const ol=document.createElement("ol");ol.className="steps";c.steps.forEach(s=>{const li=document.createElement("li");li.textContent=s;ol.appendChild(li)});rv.appendChild(ol)}rv.hidden=false;el.querySelector(".ans").hidden=false};
+  el.querySelector(".yes").onclick=()=>{const n=(S[c.id].n||0)+1;if(n>=INTERVALS.length){S[c.id]={s:"done"};toast("Maîtrisée 🎉")}else{S[c.id]={s:"learn",n,due:addDays(INTERVALS[n])};toast(`Prochaine révision dans ${INTERVALS[n]} jours`)}saveS();el.querySelectorAll(".ans button").forEach(b=>b.disabled=true)};
+  el.querySelector(".no").onclick=()=>{S[c.id]={s:"learn",n:0,due:addDays(1)};saveS();toast("Elle revient demain");el.querySelectorAll(".ans button").forEach(b=>b.disabled=true)};
+  return el}
+function quizEl(q){const el=document.createElement("section");el.className="card";el.dataset.id=q.id;el.dataset.th=q.th;themeVars(el,q.th);
+  el.innerHTML=`<div class="content"><div class="emoji">❓</div><h2></h2><div class="opts"></div><p class="ex" hidden></p></div>${meta({th:q.th,ue:q.ue},"")}`;
+  el.querySelector("h2").textContent=q.q;const box=el.querySelector(".opts"),ex=el.querySelector(".ex");
+  q.o.forEach((t,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=t;b.onclick=()=>{box.querySelectorAll(".opt").forEach((o,j)=>{o.disabled=true;if(j===q.a)o.classList.add("good")});if(i!==q.a)b.classList.add("bad");ex.textContent=(i===q.a?"Bien joué. ":"Raté. ")+q.x;ex.hidden=false};box.appendChild(b)});
+  return el}
+function pauseEl(){const el=document.createElement("section");el.className="card";el.style.setProperty("--g1","#22252F");el.style.setProperty("--g2","#0B0C10");
+  const lbl=theme==="rev"?(ue==="all"?"Manip":UES[ue]):theme==="all"?"":THEMES[theme].label;
+  el.innerHTML=`<div class="content"><div class="emoji">🌿</div><h2>Petite pause ?</h2><p class="body">Tu as vu <b>${stats.seen.length}</b> carte${stats.seen.length>1?"s":""} aujourd’hui. Bon moment pour lever les yeux. Si tu veux continuer, c’est toi qui décides.</p>
+  <div>${shown<queue.length?'<button class="big more">Continuer</button>':""}${sample?`<button class="ghost gen">✨ 5 nouvelles cartes${lbl?" "+lbl:""}</button>`:""}</div>${shown>=queue.length?'<p class="status">Tu as tout vu ici pour l’instant.</p>':'<p class="status"></p>'}</div>`;
+  const m=el.querySelector(".more");if(m)m.onclick=()=>{el.remove();append()};const g=el.querySelector(".gen");if(g)g.onclick=()=>generate(el);return el}
+
+// ======================= construction du fil
+function filt(c){if(theme==="rev")return c.th==="manip"&&(ue==="all"||c.ue===ue);return theme==="all"||c.th===theme}
+function build(){
+  feed.innerHTML="";shown=0;const seed=today+theme+ue;
+  const pool=allCards().filter(filt).filter(c=>!S[c.id]||S[c.id].s==="learn");
+  const due=pool.filter(c=>S[c.id]&&S[c.id].s==="learn"&&S[c.id].due<=today);
+  const rest=pool.filter(c=>!due.includes(c));
+  const fresh=rest.filter(c=>!seenEver.has(c.id)),old=rest.filter(c=>seenEver.has(c.id));
+  const order=(theme==="all"?wshuffle(fresh,seed):shuffle(fresh,seed)).concat(shuffle(old,seed+"o"));
+  const qs=shuffle(QUIZ.filter(filt),seed+"q");
+  queue=[];let di=0,qi=0;
+  if(theme==="rev"&&due.length){due.slice(0,3).forEach(c=>queue.push({k:"r",d:c}));di=3}
+  order.forEach((c,i)=>{queue.push({k:"c",d:c});if((i+1)%4===0&&di<due.length)queue.push({k:"r",d:due[di++]});if((i+1)%6===0&&qi<qs.length)queue.push({k:"q",d:qs[qi++]})});
+  while(di<due.length)queue.push({k:"r",d:due[di++]});
+  append();feed.scrollTop=0;renderStat();
+}
+function append(){let n=0;while(shown<queue.length&&n<SESSION){const it=queue[shown++];const el=it.k==="c"?cardEl(it.d):it.k==="r"?reviewEl(it.d):quizEl(it.d);feed.appendChild(el);obs.observe(el);n++}feed.appendChild(pauseEl())}
+
+async function generate(pc){const st=pc.querySelector(".status"),btn=pc.querySelector(".gen");btn.disabled=true;st.textContent="Claude prépare tes cartes… (jusqu’à une minute)";
+  const th=theme==="rev"?"manip":theme==="all"?Object.keys(THEMES).sort((a,b)=>weight(b)-weight(a))[Math.floor(Math.random()*2)]:theme;
+  const sub=theme==="rev"&&ue!=="all"?` Matière précise : ${UES[ue]}.`:"";
+  const titles=allCards().filter(c=>c.th===th).map(c=>c.t).join(" | ");
+  const prompt=`Tu écris des cartes pour une appli de scroll éducatif façon TikTok, en français, pour un étudiant manipulateur en électroradiologie médicale qui joue au volley en compétition.
+Thème : ${THEMES[th].desc}.${sub}
+Écris 5 cartes NOUVELLES, différentes de celles-ci : ${titles}
+Niveau : intermédiaire à avancé. Interdit : les évidences et bases que tout le monde connaît. Chaque carte doit apprendre quelque chose de concret, précis ou peu connu.
+Règles : informations exactes et vérifiables uniquement (si tu n’es pas sûr, choisis un autre sujet) ; ton direct, tutoiement ; titre accrocheur de 12 mots max ; texte de 2 à 3 phrases courtes ; apostrophe typographique ’ ; 1 emoji par carte ; "steps" facultatif (3 à 4 étapes courtes) pour une méthode ; "src" facultatif : source courte et réelle (recommandation, auteur et année) seulement si tu en es certain.
+Réponds UNIQUEMENT avec un tableau JSON : [{"e":"emoji","t":"titre","b":"texte","steps":["..."],"src":"..."}]`;
+  try{const data=await sample.json(prompt,{modelTier:"default"});
+    const arr=(Array.isArray(data)?data:[]).filter(x=>x&&x.t&&x.b).slice(0,5).map((x,i)=>({id:"g"+Date.now()+i,th,ue:theme==="rev"&&ue!=="all"?ue:undefined,e:String(x.e||THEMES[th].e).slice(0,4),t:String(x.t),b:String(x.b),steps:Array.isArray(x.steps)&&x.steps.length?x.steps.slice(0,4).map(String):undefined,src:x.src?String(x.src):undefined,ai:true}));
+    if(!arr.length)throw{code:"empty"};gen=gen.concat(arr).slice(-300);store.set("su3-gen",gen);
+    pc.remove();arr.forEach(c=>{const el=cardEl(c);feed.appendChild(el);obs.observe(el)});feed.appendChild(pauseEl());toast("5 nouvelles cartes ajoutées");
+  }catch(e){btn.disabled=false;st.textContent=e&&e.code==="not_granted"?"Génération non autorisée. Les cartes prêtes restent disponibles.":e&&e.code==="rate_limited"?"Trop de demandes d’un coup. Réessaie dans un moment.":"La génération n’a pas abouti. Réessaie avec le bouton."}}
+
+// ======================= suivi
+const enter=new Map();
+const obs=new IntersectionObserver(es=>es.forEach(e=>{const el=e.target,id=el.dataset.id,th=el.dataset.th;
+  if(e.isIntersecting){enter.set(el,Date.now());if(id&&!stats.seen.includes(id)){if(!stats.seen.length)stats.streak+=1;stats.seen.push(id);store.set("su3-stats",stats);renderStat()}if(id&&!id.startsWith("rv-")){seenEver.add(id);store.set("su3-seen",[...seenEver].slice(-2000))}}
+  else if(enter.has(el)&&th){const s=Math.min(30,(Date.now()-enter.get(el))/1000);enter.delete(el);dwell[th]=(dwell[th]||0)+s;store.set("su3-dwell",dwell)}}),{root:feed,threshold:.6});
+
+function toggle(kind,id){const map={like:["su3-liked",()=>liked,v=>liked=v],save:["su3-saved",()=>saved,v=>saved=v],flag:["su3-flag",()=>flagged,v=>flagged=v]}[kind];
+  let arr=map[1]();arr=arr.includes(id)?arr.filter(x=>x!==id):arr.concat(id);map[2](arr);store.set(map[0],arr);const on=arr.includes(id);
+  if(kind==="save")toast(on?"Ajoutée à ta liste":"Retirée de ta liste");if(kind==="flag")toast(on?"Signalée : retrouve-la dans Ma liste":"Signalement retiré");
+  document.querySelectorAll(`.card[data-id="${id}"] .${kind}`).forEach(b=>b.setAttribute("aria-pressed",on))}
+function heartBurst(el,x,y){const r=el.getBoundingClientRect();const h=document.createElement("div");h.className="burst";h.textContent="❤️";h.style.left=(x-r.left)+"px";h.style.top=(y-r.top)+"px";el.appendChild(h);requestAnimationFrame(()=>h.classList.add("go"));setTimeout(()=>h.remove(),800)}
+async function share(c){const text=`${c.t}\n\n${c.b}`;try{if(navigator.share){await navigator.share({title:c.t,text});return}}catch(e){return}try{await navigator.clipboard.writeText(text);toast("Texte copié")}catch(e){toast("Copie impossible ici")}}
+let tt;function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),1700)}
+function renderStat(){const due=Object.values(S).filter(s=>s.s==="learn"&&s.due<=today).length;document.getElementById("stat").innerHTML=`<b>${stats.seen.length}</b> vues${stats.streak>0?` · 🔥 ${stats.streak}`:""}${due?` · 🔁 ${due}`:""}`}
+
+// ======================= ma liste
+const dlg=document.getElementById("dlg"),dtabs=document.getElementById("dtabs");let ltab="saved";
+function openList(tab){ltab=tab||ltab;dtabs.innerHTML="";[["saved","Gardées"],["prog","Progrès"],["flag","Signalées"]].forEach(([k,l])=>{const b=document.createElement("button");b.className="dtab";b.textContent=l;b.setAttribute("aria-pressed",k===ltab);b.onclick=()=>openList(k);dtabs.appendChild(b)});
+  const list=document.getElementById("list");list.innerHTML="";
+  const items=ids=>ids.map(byId).filter(Boolean).forEach(c=>{const d=document.createElement("div");d.className="item";d.innerHTML=`<h4></h4><p></p>`;d.querySelector("h4").textContent=(c.e||"")+" "+c.t;d.querySelector("p").textContent=c.b;list.appendChild(d)});
+  if(ltab==="saved"){if(!saved.length)list.innerHTML=`<p style="opacity:.75">Appuie sur « Garder » sur une carte pour la retrouver ici.</p>`;items(saved)}
+  if(ltab==="prog"){const v=Object.values(S);const cnt=s=>v.filter(x=>x.s===s).length;const due=v.filter(x=>x.s==="learn"&&x.due<=today).length;
+    list.innerHTML=`<div class="prog"><div><b>${cnt("learn")}</b>en révision</div><div><b>${due}</b>à revoir aujourd’hui</div><div><b>${cnt("done")}</b>maîtrisées</div><div><b>${cnt("known")}</b>déjà sues</div></div><p style="opacity:.75;font-size:.9rem;line-height:1.45">Les cartes marquées « Appris ! » reviennent à J+1, J+3, J+7, J+15, J+30 puis J+60. Retrouve-les dans l’onglet 📚 Révision ou mélangées dans ton fil.</p>`}
+  if(ltab==="flag"){if(!flagged.length){list.innerHTML=`<p style="opacity:.75">Si une carte te semble fausse, appuie sur « Erreur ? ». Elle apparaîtra ici pour que tu puisses l’envoyer à Claude.</p>`}else{const b=document.createElement("button");b.className="copy";b.textContent="Copier pour envoyer à Claude";b.onclick=async()=>{const txt="Cartes à vérifier dans Scroll utile :\n\n"+flagged.map(byId).filter(Boolean).map(c=>`- ${c.t} : ${c.b}`).join("\n");try{await navigator.clipboard.writeText(txt);toast("Copié")}catch(e){toast("Copie impossible ici")}};list.appendChild(b);items(flagged)}}
+  if(!dlg.open)dlg.showModal()}
+document.getElementById("close").onclick=()=>dlg.close();dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close()});
+
+// ======================= onglets
+const tabs=document.getElementById("tabs"),subtabs=document.getElementById("subtabs");
+[["all","Pour toi"],["rev","📚 Révision"],...Object.entries(THEMES).map(([k,v])=>[k,v.e+" "+v.label])].forEach(([k,l])=>{const b=document.createElement("button");b.className="tab";b.textContent=l;b.setAttribute("aria-pressed",k===theme);
+  b.onclick=()=>{theme=k;ue="all";tabs.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-pressed",x===b));renderSub();build()};tabs.appendChild(b)});
+function renderSub(){subtabs.hidden=theme!=="rev";subtabs.innerHTML="";if(theme!=="rev")return;[["all","Toutes"],...Object.entries(UES)].forEach(([k,l])=>{const b=document.createElement("button");b.className="sub";b.textContent=l;b.setAttribute("aria-pressed",k===ue);b.onclick=()=>{ue=k;renderSub();build()};subtabs.appendChild(b)})}
+
+renderStat();build();
+(async()=>{try{const s=await window.claude?.use?.("sample");if(s){sample=s;const last=feed.lastElementChild;if(last&&!last.dataset.id)last.replaceWith(pauseEl())}}catch(e){}})();
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+</script>
+</body>
+</html>
