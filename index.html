@@ -108,8 +108,8 @@ dialog::backdrop{background:#000a}
 .sub{flex:none;border:1px solid #FFFFFF33;background:#0000004d;border-radius:999px;padding:.28rem .7rem;font-size:.82rem;cursor:pointer;white-space:nowrap}
 .sub[aria-pressed="true"]{background:var(--ink);color:#07080C}
 .rbtn[aria-pressed="true"].flag svg{stroke:#FF9F5A}
-.dtabs{display:flex;gap:.4rem;padding:.6rem 1.2rem 0}
-.dtab{border:0;background:#8882;border-radius:999px;padding:.35rem .8rem;cursor:pointer;font-size:.9rem}
+.dtabs{display:flex;gap:.4rem;padding:.6rem 1.2rem 0;flex-wrap:wrap}
+.dtab{border:0;background:#8882;border-radius:999px;padding:.35rem .8rem;cursor:pointer;font-size:.9rem;white-space:nowrap}
 .dtab[aria-pressed="true"]{background:#8886;font-weight:700}
 .prog{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem;padding:.4rem 0}
 .prog div{background:#8881;border-radius:14px;padding:.8rem}
@@ -142,6 +142,26 @@ dialog::backdrop{background:#000a}
 .card.fit3 .content{max-height:100%;overflow-y:auto;overscroll-behavior:auto;scrollbar-width:none;
   -webkit-mask-image:linear-gradient(#000 calc(100% - 3.5rem),transparent);mask-image:linear-gradient(#000 calc(100% - 3.5rem),transparent)}
 .card.fit3 .content::-webkit-scrollbar{display:none}
+
+/* Révision : 4 boutons de difficulté */
+.grade{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;margin-top:1.1rem}
+.grade .lb{padding:.6rem .2rem;font-size:.86rem;text-align:center;line-height:1.15}
+.grade .lb small{display:block;font-weight:500;opacity:.75;font-size:.72rem;margin-top:.15rem}
+.grade .g0{border-color:#FF8E8E88}.grade .g3{border-color:#7EE2A888}
+/* Progrès par matière et partiel */
+.ue-row{padding:.65rem 0;border-bottom:1px solid #8883}
+.ue-row .t{display:flex;justify-content:space-between;gap:.6rem;font-size:.95rem;margin-bottom:.35rem}
+.ue-row .t span{opacity:.7;font-size:.85rem;white-space:nowrap}
+.bar{height:8px;background:#8883;border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:#2FB679;border-radius:99px}
+.exf{display:grid;gap:.7rem;padding:.6rem 0}
+.exf label{display:grid;gap:.3rem;font-size:.9rem;opacity:.85}
+.exf select,.exf input{font:inherit;color:inherit;background:#8882;border:1px solid #8886;border-radius:12px;padding:.6rem .7rem}
+.exf .row{display:flex;gap:.5rem;flex-wrap:wrap}
+.exbox{background:#8881;border-radius:16px;padding:.9rem 1rem;margin:.6rem 0}
+.exbox b{font-size:1.5rem}
+.exam-kpi{display:flex;gap:1.2rem;margin:1rem 0 .2rem;flex-wrap:wrap}
+.exam-kpi div{font-size:.9rem;color:var(--soft)}.exam-kpi b{display:block;font-size:1.6rem;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -687,6 +707,17 @@ if(stats.day!==today){const y=addDays(-1);stats.streak=(stats.day===y&&stats.see
 const allCards=()=>CARDS.concat(gen);
 const byId=id=>allCards().find(c=>c.id===id);
 const saveS=()=>store.set("su3-srs",S);
+let QS=store.get("su3-quiz",{}), EX=store.get("su3-exam",null), batch=0;
+const MAXI=180;
+// g : 0 = oublié, 1 = difficile, 2 = bien, 3 = facile. Renvoie l’intervalle en jours (-1 = maîtrisée).
+function grade(id,g){const o=S[id]&&S[id].s==="learn"?S[id]:{n:0};let st=o.st!=null?o.st:(INTERVALS[o.n||0]||1),df=o.df!=null?o.df:5;
+  if(g===0){st=Math.max(1,st*.3);df=Math.min(10,df+1)}
+  else{const f=1+(11-df)*.22;st=g===1?st*1.2+.5:g===2?st*f:st*f*1.5;df=Math.max(1,Math.min(10,df+(g===1?.5:g===3?-1:0)))}
+  st=Math.min(st,MAXI);const iv=g===0?1:Math.max(1,Math.round(st));
+  if(g>=2&&iv>=90){S[id]={s:"done"};saveS();return -1}
+  S[id]={s:"learn",st:+st.toFixed(2),df:+df.toFixed(2),n:(o.n||0)+1,due:addDays(iv)};saveS();return iv}
+function preview(id,g){const keep=S[id],keepD=JSON.stringify(S);const iv=grade(id,g);S=JSON.parse(keepD);if(keep===undefined)delete S[id];saveS();return iv}
+const ivTxt=iv=>iv<0?"maîtrisée":iv===1?"1 j":iv<31?iv+" j":Math.round(iv/30)+" mois";
 
 function rng(seed){let h=0;for(const c of seed)h=Math.imul(31,h)+c.charCodeAt(0)|0;return()=>{h=h+0x6D2B79F5|0;let t=Math.imul(h^h>>>15,1|h);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function shuffle(a,s){const r=rng(s),b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
@@ -827,7 +858,7 @@ function fillBody(box,c){
 function learnRow(c){const row=document.createElement("div");row.className="learn";const st=S[c.id]&&S[c.id].s;
   row.innerHTML=`<button class="lb known">Je savais déjà</button><button class="lb learnb ${st==="learn"?"on":""}">${st==="learn"?"✓ En révision":"Appris !"}</button>`;
   row.querySelector(".known").onclick=()=>{S[c.id]={s:"known"};saveS();toast("Elle ne reviendra plus");row.querySelectorAll("button").forEach(b=>b.disabled=true)};
-  row.querySelector(".learnb").onclick=e=>{if(S[c.id]&&S[c.id].s==="learn")return;S[c.id]={s:"learn",n:0,due:addDays(INTERVALS[0])};saveS();e.currentTarget.classList.add("on");e.currentTarget.textContent="✓ En révision";toast("Elle reviendra demain en révision")};
+  row.querySelector(".learnb").onclick=e=>{if(S[c.id]&&S[c.id].s==="learn")return;S[c.id]={s:"learn",n:0,st:1,df:5,due:addDays(1)};saveS();e.currentTarget.classList.add("on");e.currentTarget.textContent="✓ En révision";toast("Elle reviendra demain en révision")};
   return row}
 function cardEl(c){const el=document.createElement("section");el.className="card";el.dataset.id=c.id;el.dataset.th=c.th;themeVars(el,c.th);
   el.innerHTML=`<div class="content"></div>${meta(c)}`;const box=el.querySelector(".content");
@@ -836,28 +867,43 @@ function cardEl(c){const el=document.createElement("section");el.className="card
   let last=0;el.addEventListener("click",ev=>{if(ev.target.closest("button"))return;const n=Date.now();if(n-last<300){if(!liked.includes(c.id))toggle("like",c.id);heartBurst(el,ev.clientX,ev.clientY)}last=n});
   return el}
 function reviewEl(c){const el=document.createElement("section");el.className="card rv";el.dataset.id="rv-"+c.id;el.dataset.th=c.th;themeVars(el,c.th);
-  el.innerHTML=`<div class="content"><span class="rv-label">🔁 Révision</span><div class="emoji">${c.e||THEMES[c.th].e}</div><h2></h2><p class="body">Tu te souviens de l’explication ? Essaie de la dire dans ta tête avant de regarder.</p><button class="big show">Voir la réponse</button><div class="reveal" hidden></div><div class="learn ans" hidden><button class="lb yes">Je m’en souvenais</button><button class="lb no">J’avais oublié</button></div></div>${meta(c)}`;
+  el.innerHTML=`<div class="content"><span class="rv-label">🔁 Révision</span><div class="emoji">${c.e||THEMES[c.th].e}</div><h2></h2><p class="body">Tu te souviens de l’explication ? Essaie de la dire dans ta tête avant de regarder.</p><button class="big show">Voir la réponse</button><div class="reveal" hidden></div><div class="grade ans" hidden></div></div>${meta(c)}`;
   el.querySelector("h2").textContent=c.t;const rv=el.querySelector(".reveal");
-  el.querySelector(".show").onclick=e=>{e.currentTarget.remove();el.querySelector(".body").remove();el.querySelector(".emoji").remove();if(c.viz&&VIZ[c.viz])rv.appendChild(vizCanvas(c.viz,THEMES[c.th].a));const p=document.createElement("p");p.className="body";p.textContent=c.b;rv.appendChild(p);
-    if(c.steps){const ol=document.createElement("ol");ol.className="steps";c.steps.forEach(s=>{const li=document.createElement("li");li.textContent=s;ol.appendChild(li)});rv.appendChild(ol)}rv.hidden=false;el.querySelector(".ans").hidden=false};
-  el.querySelector(".yes").onclick=()=>{const n=(S[c.id].n||0)+1;if(n>=INTERVALS.length){S[c.id]={s:"done"};toast("Maîtrisée 🎉")}else{S[c.id]={s:"learn",n,due:addDays(INTERVALS[n])};toast(`Prochaine révision dans ${INTERVALS[n]} jours`)}saveS();el.querySelectorAll(".ans button").forEach(b=>b.disabled=true)};
-  el.querySelector(".no").onclick=()=>{S[c.id]={s:"learn",n:0,due:addDays(1)};saveS();toast("Elle revient demain");el.querySelectorAll(".ans button").forEach(b=>b.disabled=true)};
+  el.querySelector(".show").onclick=e=>{e.currentTarget.remove();el.querySelector(".body").remove();el.querySelector(".emoji").remove();if(c.img){const im=document.createElement("img");im.className="schema";im.src=c.img;im.alt="Schéma : "+c.t;rv.appendChild(im)}else if(c.viz&&VIZ[c.viz])rv.appendChild(vizCanvas(c.viz,THEMES[c.th].a));const p=document.createElement("p");p.className="body";p.textContent=c.b;rv.appendChild(p);
+    if(c.steps){const ol=document.createElement("ol");ol.className="steps";c.steps.forEach(s=>{const li=document.createElement("li");li.textContent=s;ol.appendChild(li)});rv.appendChild(ol)}rv.hidden=false;const gb=el.querySelector(".ans");gb.innerHTML=["Oublié","Difficile","Bien","Facile"].map((l,g)=>`<button class="lb g${g}">${l}<small>${ivTxt(preview(c.id,g))}</small></button>`).join("");gb.hidden=false;
+    gb.querySelectorAll("button").forEach((b,g)=>b.onclick=()=>{const iv=grade(c.id,g);toast(iv<0?"Maîtrisée 🎉":iv===1?"Elle revient demain":`Prochaine révision dans ${ivTxt(iv)}`);gb.querySelectorAll("button").forEach(x=>x.disabled=true);b.classList.add("on");renderStat()})};
   return el}
 function quizEl(q){const el=document.createElement("section");el.className="card";el.dataset.id=q.id;el.dataset.th=q.th;themeVars(el,q.th);
   el.innerHTML=`<div class="content"><div class="emoji">❓</div><h2></h2><div class="opts"></div><p class="ex" hidden></p></div>${meta({th:q.th,ue:q.ue},"")}`;
   el.querySelector("h2").textContent=q.q;const box=el.querySelector(".opts"),ex=el.querySelector(".ex");
-  q.o.forEach((t,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=t;b.onclick=()=>{box.querySelectorAll(".opt").forEach((o,j)=>{o.disabled=true;if(j===q.a)o.classList.add("good")});if(i!==q.a)b.classList.add("bad");ex.textContent=(i===q.a?"Bien joué. ":"Raté. ")+q.x;ex.hidden=false};box.appendChild(b)});
+  q.o.forEach((t,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=t;b.onclick=()=>{box.querySelectorAll(".opt").forEach((o,j)=>{o.disabled=true;if(j===q.a)o.classList.add("good")});if(i!==q.a)b.classList.add("bad");ex.textContent=(i===q.a?"Bien joué. ":"Raté. ")+q.x;ex.hidden=false;const r=QS[q.id]||{ok:0,ko:0};i===q.a?r.ok++:r.ko++;r.last=today;QS[q.id]=r;store.set("su3-quiz",QS)};box.appendChild(b)});
   return el}
 function pauseEl(){const el=document.createElement("section");el.className="card";el.style.setProperty("--g1","#22252F");el.style.setProperty("--g2","#0B0C10");
-  const lbl=theme==="rev"?(ue==="all"?"Manip":UES[ue]):theme==="all"?"":THEMES[theme].label;
+  const lbl=theme==="rev"?(UES[ue]||"Manip"):theme==="all"?"":THEMES[theme].label;
   el.innerHTML=`<div class="content"><div class="emoji">🌿</div><h2>Petite pause ?</h2><p class="body">Tu as vu <b>${stats.seen.length}</b> carte${stats.seen.length>1?"s":""} aujourd’hui. Bon moment pour lever les yeux. Si tu veux continuer, c’est toi qui décides.</p>
   <div>${shown<queue.length?'<button class="big more">Continuer</button>':""}${sample?`<button class="ghost gen">✨ 5 nouvelles cartes${lbl?" "+lbl:""}</button>`:""}</div>${shown>=queue.length?'<p class="status">Tu as tout vu ici pour l’instant.</p>':'<p class="status"></p>'}</div>`;
   const m=el.querySelector(".more");if(m)m.onclick=()=>{el.remove();append()};const g=el.querySelector(".gen");if(g)g.onclick=()=>generate(el);return el}
 
 // ======================= construction du fil
-function filt(c){if(theme==="rev")return c.th==="manip"&&(ue==="all"||c.ue===ue);return theme==="all"||c.th===theme}
+function filt(c){if(theme==="rev")return c.th==="manip"&&(ue==="all"||ue==="mix"||c.ue===ue);return theme==="all"||c.th===theme}
+function examInfo(){if(!EX||!UES[EX.ue])return null;const days=Math.round((new Date(EX.date)-new Date(today))/864e5);
+  const cs=allCards().filter(c=>c.ue===EX.ue),nw=cs.filter(c=>!S[c.id]).length,lr=cs.filter(c=>S[c.id]&&S[c.id].s==="learn").length,ok=cs.filter(c=>S[c.id]&&(S[c.id].s==="done"||S[c.id].s==="known")).length;
+  const per=days>0?Math.max(Math.min(5,nw),Math.ceil(nw/Math.max(1,days-1))):nw;const todaySeen=stats.seen.filter(id=>{const c=byId(id);return c&&c.ue===EX.ue}).length;
+  return{days,total:cs.length,nw,lr,ok,per,todaySeen,pct:cs.length?Math.round(100*(ok+lr*.5)/cs.length):0}}
+function examEl(){const x=examInfo();const el=document.createElement("section");el.className="card";themeVars(el,"manip");
+  el.innerHTML=`<div class="content"><div class="emoji">🎯</div><h2></h2><p class="body"></p><div class="exam-kpi"><div><b>${x.per}</b>cartes / jour</div><div><b>${Math.min(x.todaySeen,x.per)}/${x.per}</b>aujourd’hui</div><div><b>${x.pct} %</b>appris</div></div><button class="big go">▶️ 5 cartes pour démarrer</button></div>${meta({th:"manip",ue:EX.ue})}`;
+  el.querySelector("h2").textContent=x.days===0?"Partiel aujourd’hui : dernière révision":`Partiel dans ${x.days} jour${x.days>1?"s":""}`;
+  el.querySelector(".body").textContent=x.nw?`Il te reste ${x.nw} carte${x.nw>1?"s":""} jamais vue${x.nw>1?"s":""} en ${UES[EX.ue]}. Commence petit : 5 cartes, puis tu décides.`:`Tu as tout vu en ${UES[EX.ue]}. Garde le rythme avec les révisions du jour.`;
+  el.querySelector(".go").onclick=()=>goRev(EX.ue,5);return el}
+function goRev(u,b){theme="rev";ue=u;batch=b||0;tabs.querySelectorAll(".tab").forEach((x,i)=>x.setAttribute("aria-pressed",i===1));renderSub();build()}
+function mixQueue(seed){const groups={};QUIZ.filter(q=>q.th==="manip"&&q.ue).forEach(q=>(groups[q.ue]=groups[q.ue]||[]).push(q));
+  const rank=q=>{const r=QS[q.id];return !r?1:r.ko>r.ok?0:2};
+  const lists=Object.values(groups).map((g,i)=>shuffle(g,seed+i).sort((a,b)=>rank(a)-rank(b)));const out=[];
+  for(let k=0;lists.some(l=>l.length);k++){shuffle(lists,seed+"r"+k).forEach(l=>{if(l.length)out.push(l.shift())})}return out}
 function build(){
   feed.innerHTML="";shown=0;const seed=today+theme+ue;
+  if(theme==="rev"&&ue==="mix"){const due=allCards().filter(c=>c.th==="manip"&&S[c.id]&&S[c.id].s==="learn"&&S[c.id].due<=today);queue=[];let di=0;
+    mixQueue(seed).forEach((q,i)=>{queue.push({k:"q",d:q});if((i+1)%3===0&&di<due.length)queue.push({k:"r",d:due[di++]})});append();feed.scrollTop=0;renderStat();return}
   const pool=allCards().filter(filt).filter(c=>!S[c.id]||S[c.id].s==="learn");
   const due=pool.filter(c=>S[c.id]&&S[c.id].s==="learn"&&S[c.id].due<=today);
   const rest=pool.filter(c=>!due.includes(c));
@@ -865,16 +911,17 @@ function build(){
   const order=(theme==="all"?wshuffle(fresh,seed):shuffle(fresh,seed)).concat(shuffle(old,seed+"o"));
   const qs=shuffle(QUIZ.filter(filt),seed+"q");
   queue=[];let di=0,qi=0;
+  const xi=examInfo();if(xi&&xi.days>=0&&(theme==="all"||(theme==="rev"&&ue==="all")))queue.push({k:"x"});
   if(theme==="rev"&&due.length){due.slice(0,3).forEach(c=>queue.push({k:"r",d:c}));di=3}
   order.forEach((c,i)=>{queue.push({k:"c",d:c});if((i+1)%4===0&&di<due.length)queue.push({k:"r",d:due[di++]});if((i+1)%6===0&&qi<qs.length)queue.push({k:"q",d:qs[qi++]})});
   while(di<due.length)queue.push({k:"r",d:due[di++]});
   append();feed.scrollTop=0;renderStat();
 }
-function append(){let n=0;while(shown<queue.length&&n<SESSION){const it=queue[shown++];const el=it.k==="c"?cardEl(it.d):it.k==="r"?reviewEl(it.d):quizEl(it.d);feed.appendChild(el);obs.observe(el);n++}feed.appendChild(pauseEl())}
+function append(){let n=0;const lim=batch||SESSION;batch=0;while(shown<queue.length&&n<lim){const it=queue[shown++];const el=it.k==="x"?examEl():it.k==="c"?cardEl(it.d):it.k==="r"?reviewEl(it.d):quizEl(it.d);feed.appendChild(el);obs.observe(el);n++}feed.appendChild(pauseEl())}
 
 async function generate(pc){const st=pc.querySelector(".status"),btn=pc.querySelector(".gen");btn.disabled=true;st.textContent="Claude prépare tes cartes… (jusqu’à une minute)";
   const th=theme==="rev"?"manip":theme==="all"?Object.keys(THEMES).sort((a,b)=>weight(b)-weight(a))[Math.floor(Math.random()*2)]:theme;
-  const sub=theme==="rev"&&ue!=="all"?` Matière précise : ${UES[ue]}.`:"";
+  const sub=theme==="rev"&&UES[ue]?` Matière précise : ${UES[ue]}.`:"";
   const titles=allCards().filter(c=>c.th===th).map(c=>c.t).join(" | ");
   const prompt=`Tu écris des cartes pour une appli de scroll éducatif façon TikTok, en français, pour un étudiant manipulateur en électroradiologie médicale qui joue au volley en compétition.
 Thème : ${THEMES[th].desc}.${sub}
@@ -883,7 +930,7 @@ Niveau : intermédiaire à avancé. Interdit : les évidences et bases que tout 
 Règles : informations exactes et vérifiables uniquement (si tu n’es pas sûr, choisis un autre sujet) ; ton direct, tutoiement ; titre accrocheur de 12 mots max ; texte de 2 à 3 phrases courtes ; apostrophe typographique ’ ; 1 emoji par carte ; "steps" facultatif (3 à 4 étapes courtes) pour une méthode ; "src" facultatif : source courte et réelle (recommandation, auteur et année) seulement si tu en es certain.
 Réponds UNIQUEMENT avec un tableau JSON : [{"e":"emoji","t":"titre","b":"texte","steps":["..."],"src":"..."}]`;
   try{const data=await sample.json(prompt,{modelTier:"default"});
-    const arr=(Array.isArray(data)?data:[]).filter(x=>x&&x.t&&x.b).slice(0,5).map((x,i)=>({id:"g"+Date.now()+i,th,ue:theme==="rev"&&ue!=="all"?ue:undefined,e:String(x.e||THEMES[th].e).slice(0,4),t:String(x.t),b:String(x.b),steps:Array.isArray(x.steps)&&x.steps.length?x.steps.slice(0,4).map(String):undefined,src:x.src?String(x.src):undefined,ai:true}));
+    const arr=(Array.isArray(data)?data:[]).filter(x=>x&&x.t&&x.b).slice(0,5).map((x,i)=>({id:"g"+Date.now()+i,th,ue:theme==="rev"&&UES[ue]?ue:undefined,e:String(x.e||THEMES[th].e).slice(0,4),t:String(x.t),b:String(x.b),steps:Array.isArray(x.steps)&&x.steps.length?x.steps.slice(0,4).map(String):undefined,src:x.src?String(x.src):undefined,ai:true}));
     if(!arr.length)throw{code:"empty"};gen=gen.concat(arr).slice(-300);store.set("su3-gen",gen);
     pc.remove();arr.forEach(c=>{const el=cardEl(c);feed.appendChild(el);obs.observe(el)});feed.appendChild(pauseEl());toast("5 nouvelles cartes ajoutées");
   }catch(e){btn.disabled=false;st.textContent=e&&e.code==="not_granted"?"Génération non autorisée. Les cartes prêtes restent disponibles.":e&&e.code==="rate_limited"?"Trop de demandes d’un coup. Réessaie dans un moment.":"La génération n’a pas abouti. Réessaie avec le bouton."}}
@@ -905,12 +952,19 @@ function renderStat(){const due=Object.values(S).filter(s=>s.s==="learn"&&s.due<
 
 // ======================= ma liste
 const dlg=document.getElementById("dlg"),dtabs=document.getElementById("dtabs");let ltab="saved";
-function openList(tab){ltab=tab||ltab;dtabs.innerHTML="";[["saved","Gardées"],["prog","Progrès"],["flag","Signalées"]].forEach(([k,l])=>{const b=document.createElement("button");b.className="dtab";b.textContent=l;b.setAttribute("aria-pressed",k===ltab);b.onclick=()=>openList(k);dtabs.appendChild(b)});
+function openList(tab){ltab=tab||ltab;dtabs.innerHTML="";[["saved","Gardées"],["prog","Progrès"],["exam","🎯 Partiel"],["flag","Signalées"]].forEach(([k,l])=>{const b=document.createElement("button");b.className="dtab";b.textContent=l;b.setAttribute("aria-pressed",k===ltab);b.onclick=()=>openList(k);dtabs.appendChild(b)});
   const list=document.getElementById("list");list.innerHTML="";
   const items=ids=>ids.map(byId).filter(Boolean).forEach(c=>{const d=document.createElement("div");d.className="item";d.innerHTML=`<h4></h4><p></p>`;d.querySelector("h4").textContent=(c.e||"")+" "+c.t;d.querySelector("p").textContent=c.b;list.appendChild(d)});
   if(ltab==="saved"){if(!saved.length)list.innerHTML=`<p style="opacity:.75">Appuie sur « Garder » sur une carte pour la retrouver ici.</p>`;items(saved)}
   if(ltab==="prog"){const v=Object.values(S);const cnt=s=>v.filter(x=>x.s===s).length;const due=v.filter(x=>x.s==="learn"&&x.due<=today).length;
-    list.innerHTML=`<div class="prog"><div><b>${cnt("learn")}</b>en révision</div><div><b>${due}</b>à revoir aujourd’hui</div><div><b>${cnt("done")}</b>maîtrisées</div><div><b>${cnt("known")}</b>déjà sues</div></div><p style="opacity:.75;font-size:.9rem;line-height:1.45">Les cartes marquées « Appris ! » reviennent à J+1, J+3, J+7, J+15, J+30 puis J+60. Retrouve-les dans l’onglet 📚 Révision ou mélangées dans ton fil.</p>`}
+    list.innerHTML=`<div class="prog"><div><b>${cnt("learn")}</b>en révision</div><div><b>${due}</b>à revoir aujourd’hui</div><div><b>${cnt("done")}</b>maîtrisées</div><div><b>${cnt("known")}</b>déjà sues</div></div><p style="opacity:.75;font-size:.9rem;line-height:1.45">Une carte « Appris ! » revient le lendemain. Ensuite, c’est toi qui notes : Oublié, Difficile, Bien ou Facile. Plus tu la connais, plus elle revient tard, jusqu’à être maîtrisée.</p><h4 style="margin:1rem 0 .2rem">Par matière</h4>`;
+    Object.entries(UES).forEach(([k,l])=>{const cs=allCards().filter(c=>c.ue===k);if(!cs.length)return;const ok=cs.filter(c=>S[c.id]&&(S[c.id].s==="done"||S[c.id].s==="known")).length,lr=cs.filter(c=>S[c.id]&&S[c.id].s==="learn").length;
+      const qs=QUIZ.filter(q=>q.ue===k).map(q=>QS[q.id]).filter(Boolean),qo=qs.reduce((a,r)=>a+r.ok,0),qt=qs.reduce((a,r)=>a+r.ok+r.ko,0);const pc=Math.round(100*(ok+lr*.5)/cs.length);
+      const d=document.createElement("div");d.className="ue-row";d.innerHTML=`<div class="t"><b></b><span>${ok+lr}/${cs.length} cartes${qt?` · quiz ${Math.round(100*qo/qt)} %`:""}</span></div><div class="bar"><i style="width:${pc}%"></i></div>`;d.querySelector("b").textContent=l;list.appendChild(d)})}
+  if(ltab==="exam"){const x=examInfo();list.innerHTML=(x?`<div class="exbox">${x.days<0?"Ce partiel est passé. Tu peux en programmer un autre.":`<b>J-${x.days}</b> · ${UES[EX.ue]}<br>${x.per} cartes par jour · ${x.pct} % appris · ${x.nw} jamais vues`}</div>`:`<p style="opacity:.8;line-height:1.45">Indique ta matière et la date du partiel : l’appli calcule combien de cartes voir chaque jour et te propose de démarrer par 5.</p>`)+
+      `<div class="exf"><label>Matière<select id="exue">${Object.entries(UES).filter(([k])=>allCards().some(c=>c.ue===k)).map(([k,l])=>`<option value="${k}" ${EX&&EX.ue===k?"selected":""}>${l}</option>`).join("")}</select></label><label>Date du partiel<input type="date" id="exdate" min="${today}" value="${EX?EX.date:""}"></label><div class="row"><button class="copy" id="exsave">Enregistrer</button>${EX?'<button class="copy" id="exgo">▶️ 5 cartes</button><button class="copy" id="exdel">Supprimer</button>':""}</div></div>`;
+    list.querySelector("#exsave").onclick=()=>{const d=list.querySelector("#exdate").value;if(!d){toast("Choisis une date");return}EX={ue:list.querySelector("#exue").value,date:d};store.set("su3-exam",EX);toast("Partiel enregistré");openList("exam");build()};
+    const gg=list.querySelector("#exgo");if(gg)gg.onclick=()=>{dlg.close();goRev(EX.ue,5)};const dd=list.querySelector("#exdel");if(dd)dd.onclick=()=>{EX=null;store.set("su3-exam",null);openList("exam");build()}}
   if(ltab==="flag"){if(!flagged.length){list.innerHTML=`<p style="opacity:.75">Si une carte te semble fausse, appuie sur « Erreur ? ». Elle apparaîtra ici pour que tu puisses l’envoyer à Claude.</p>`}else{const b=document.createElement("button");b.className="copy";b.textContent="Copier pour envoyer à Claude";b.onclick=async()=>{const txt="Cartes à vérifier dans Scroll utile :\n\n"+flagged.map(byId).filter(Boolean).map(c=>`- ${c.t} : ${c.b}`).join("\n");try{await navigator.clipboard.writeText(txt);toast("Copié")}catch(e){toast("Copie impossible ici")}};list.appendChild(b);items(flagged)}}
   if(!dlg.open)dlg.showModal()}
 document.getElementById("close").onclick=()=>dlg.close();dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close()});
@@ -919,7 +973,7 @@ document.getElementById("close").onclick=()=>dlg.close();dlg.addEventListener("c
 const tabs=document.getElementById("tabs"),subtabs=document.getElementById("subtabs");
 [["all","Pour toi"],["rev","📚 Révision"],...Object.entries(THEMES).map(([k,v])=>[k,v.e+" "+v.label])].forEach(([k,l])=>{const b=document.createElement("button");b.className="tab";b.textContent=l;b.setAttribute("aria-pressed",k===theme);
   b.onclick=()=>{theme=k;ue="all";tabs.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-pressed",x===b));renderSub();build()};tabs.appendChild(b)});
-function renderSub(){subtabs.hidden=theme!=="rev";subtabs.innerHTML="";if(theme!=="rev")return;[["all","Toutes"],...Object.entries(UES)].forEach(([k,l])=>{const b=document.createElement("button");b.className="sub";b.textContent=l;b.setAttribute("aria-pressed",k===ue);b.onclick=()=>{ue=k;renderSub();build()};subtabs.appendChild(b)})}
+function renderSub(){subtabs.hidden=theme!=="rev";subtabs.innerHTML="";if(theme!=="rev")return;[["all","Toutes"],["mix","🎲 Quiz mélangé"],...Object.entries(UES)].forEach(([k,l])=>{const b=document.createElement("button");b.className="sub";b.textContent=l;b.setAttribute("aria-pressed",k===ue);b.onclick=()=>{ue=k;renderSub();build()};subtabs.appendChild(b)})}
 
 renderStat();build();
 (async()=>{try{const s=await window.claude?.use?.("sample");if(s){sample=s;const last=feed.lastElementChild;if(last&&!last.dataset.id)last.replaceWith(pauseEl())}}catch(e){}})();
