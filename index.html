@@ -162,6 +162,34 @@ dialog::backdrop{background:#000a}
 .exbox b{font-size:1.5rem}
 .exam-kpi{display:flex;gap:1.2rem;margin:1rem 0 .2rem;flex-wrap:wrap}
 .exam-kpi div{font-size:.9rem;color:var(--soft)}.exam-kpi b{display:block;font-size:1.6rem;color:var(--ink)}
+
+/* Barre de progression du fil */
+#pbar{height:3px;margin:.35rem 1rem 0;border-radius:99px;background:#FFFFFF1a;overflow:hidden}
+#pbar i{display:block;height:100%;width:0;background:var(--ink);border-radius:99px;transition:width .35s ease}
+/* Badge « Ton cours » */
+.kind{display:table;font-size:.76rem;font-weight:700;padding:.2rem .6rem;border-radius:999px;background:#FFFFFF1c;border:1px solid #FFFFFF26;margin-bottom:.8rem}
+/* Schéma : toucher pour agrandir */
+.schema-wrap{position:relative;cursor:zoom-in}
+.schema-wrap::after{content:"🔍 Agrandir";position:absolute;right:.5rem;bottom:1.6rem;font-size:.75rem;font-weight:700;background:#000b;color:#fff;border-radius:999px;padding:.2rem .55rem;pointer-events:none}
+.fit1 .schema-wrap::after,.fit2 .schema-wrap::after{bottom:1.2rem}
+#zoom{position:fixed;inset:0;z-index:30;background:#000e;display:none;touch-action:none;overflow:hidden}
+#zoom.on{display:block}
+#zoom img{position:absolute;left:50%;top:50%;max-width:96vw;max-height:86vh;transform-origin:center;background:#fff;border-radius:10px;will-change:transform}
+#zoom .zx{position:absolute;top:calc(.8rem + env(safe-area-inset-top,0px));right:.8rem;z-index:2;border:0;border-radius:999px;background:#fffd;color:#111;font-weight:700;padding:.5rem .9rem}
+#zoom .zh{position:absolute;left:0;right:0;bottom:calc(1rem + env(safe-area-inset-bottom,0px));text-align:center;color:#fffb;font-size:.85rem}
+.card.fit1 .kind{margin-bottom:.5rem;font-size:.7rem;padding:.12rem .5rem}.card.fit2 .kind{display:none}.card.fit2 .lb.say{padding:.42rem .6rem}
+/* Écouter */
+.lb.say{padding:.55rem .8rem}
+.lb.say[aria-pressed="true"]{background:var(--a);color:#111;border-color:var(--a)}
+/* Apparition douce + confettis (désactivés si « réduire les animations ») */
+@media (prefers-reduced-motion:no-preference){
+  .card[data-obs] .content>*{opacity:0;transform:translateY(14px);transition:opacity .45s ease,transform .45s ease}
+  .card[data-obs].in .content>*{opacity:1;transform:none}
+  .card[data-obs].in .content>*:nth-child(2){transition-delay:.06s}.card[data-obs].in .content>*:nth-child(3){transition-delay:.12s}
+  .card[data-obs].in .content>*:nth-child(4){transition-delay:.18s}.card[data-obs].in .content>*:nth-child(n+5){transition-delay:.24s}
+  .confetti{position:absolute;z-index:6;width:8px;height:12px;border-radius:2px;pointer-events:none;animation:cf 1.1s ease-out forwards}
+  @keyframes cf{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(var(--dx),var(--dy)) rotate(var(--r));opacity:0}}
+}
 </style>
 </head>
 <body>
@@ -169,7 +197,9 @@ dialog::backdrop{background:#000a}
   <div class="top"><div class="brand">Scroll utile</div><div class="stat" id="stat"></div></div>
   <nav class="tabs" id="tabs" aria-label="Thèmes"></nav>
   <nav class="subtabs" id="subtabs" aria-label="Matières" hidden></nav>
+  <div id="pbar" aria-hidden="true"><i></i></div>
 </header>
+<div id="zoom" role="dialog" aria-label="Schéma agrandi"><button class="zx">Fermer ✕</button><img alt=""><div class="zh">Pince pour zoomer · double-tap ×2,5</div></div>
 <main id="feed" aria-live="polite"></main>
 <div class="toast" id="toast" role="status"></div>
 <dialog id="dlg"><div class="dh"><h3>Ma liste</h3><button id="close">Fermer</button></div><div class="dtabs" id="dtabs"></div><div class="list" id="list"></div></dialog>
@@ -693,6 +723,22 @@ QUIZ.push(
  {id:"s3anq8",th:"manip",course:true,ue:"anatomie",q:"Quelle branche de l’artère maxillaire va vers la dure-mère ?",o:["L’infra-orbitaire","La méningée moyenne","La sphéno-palatine"],a:1,x:"La méningée moyenne vascularise la dure-mère qui recouvre le cerveau."}
 );
 
+// ===== CARTES SOURCÉES (recherches nov. 2026)
+CARDS.push(
+ {id:"c4u1",th:"utile",e:"😴",t:"Les nuits pendant les révisions comptent plus que la veille",b:"Au MIT, 100 étudiants suivis par Fitbit pendant un semestre : la qualité, la durée et surtout la régularité du sommeil expliquaient environ un quart des écarts de notes. La nuit juste avant l’examen n’avait pas d’effet mesurable. Se coucher après une certaine heure, souvent vers 2 h, faisait baisser les résultats même à durée de sommeil égale.",src:"Okano et al., npj Science of Learning, 2019"},
+ {id:"c4u2",th:"utile",e:"🎲",t:"Mélange tes quiz : +9 points un mois plus tard",b:"Dans une étude en classe sur 155 élèves, les notions revues en quiz mélangés étaient réussies à 63 % un mois après, contre 54 % en quiz regroupés par notion et 47 % sans quiz. Mélanger t’oblige à reconnaître de quel type de question il s’agit. C’est le principe du nouveau « 🎲 Quiz mélangé » de l’appli.",src:"Sana & Yan, Psychological Science, 2022"},
+ {id:"c4u3",th:"utile",e:"📈",t:"Pourquoi l’appli te demande si c’était facile",b:"Les logiciels de révision récents comme FSRS (Anki) suivent trois choses par carte : la difficulté, la stabilité du souvenir et la probabilité de t’en rappeler aujourd’hui. Selon Anki, FSRS demande moins de révisions que l’ancien algorithme pour le même niveau de mémorisation. Ta note (oublié, difficile, bien, facile) sert à régler ces paramètres.",src:"Documentation Anki, FSRS"},
+ {id:"c4m1",th:"manip",ue:"scanner",e:"🔬",t:"Scanner à comptage photonique : ce qu’il promet",b:"Le détecteur compte chaque photon et mesure son énergie, au lieu de tout additionner. En août 2025, l’Hôpital Américain de Paris a installé un NAEOTOM Alpha.Pro : il annonce 30 % de dose et 25 % d’iode en moins, une résolution de 0,11 mm et de l’imagerie spectrale à chaque examen. Ce sont les chiffres annoncés par l’hôpital, pas encore une moyenne mesurée.",src:"Caducée, août 2025"},
+ {id:"c4v1",th:"volley",e:"6️⃣",t:"R4 : ton attaque ne se limite pas au poste 4",b:"Le réceptionneur-attaquant est appelé R4 parce que le poste 4 est sa position d’attaque privilégiée. Mais il attaque aussi depuis l’aile au poste 2, et en zone arrière au poste 6, derrière la ligne des 3 m. Quand tu es en défense au poste 6, prépare ton élan pour être une vraie option pour le passeur.",src:"Wikipédia, Volley-ball"},
+ {id:"c4v2",th:"volley",e:"↔️",t:"Le pointu peut se retrouver à ta place en réception",b:"Le pointu joue à l’opposé du passeur et attaque en général au poste 2. Il ne passe au poste 4 que dans certaines rotations de réception. Pointus et réceptionneurs-attaquants sont regroupés sous le nom d’« ailiers ».",src:"Wikipédia, Volley-ball"},
+ {id:"c4s1",th:"savoir",e:"📷",t:"Ton A6000 en portrait : les réglages de départ",b:"Avec un 35 mm f/1.8, ouvre au maximum pour flouter l’arrière-plan. Le reste se règle une fois pour toutes.",steps:["Mode A (priorité ouverture), f/1.8", "ISO auto, mesure multi", "Mise au point AF-C, zone large", "Détection de visage activée (menu 1, page 5)"],src:"CameraTips, Sony a6000 portrait settings"}
+);
+QUIZ.push(
+ {id:"c4q1",th:"utile",q:"Selon l’étude du MIT, quelle nuit compte le moins pour la note ?",o:["Les nuits pendant les révisions", "La nuit juste avant l’examen", "Toutes comptent pareil"],a:1,x:"La nuit d’avant n’avait pas d’effet mesurable : c’est la régularité sur le semestre qui compte."},
+ {id:"c4q2",th:"volley",q:"Pourquoi le réceptionneur-attaquant s’appelle-t-il R4 ?",o:["Il réceptionne au poste 4", "Le poste 4 est sa position d’attaque privilégiée", "Il porte le numéro 4"],a:1,x:"R pour réceptionneur, 4 pour sa position d’attaque privilégiée."},
+ {id:"c4q3",th:"manip",ue:"scanner",q:"Que mesure en plus un détecteur à comptage photonique ?",o:["La température du patient", "L’énergie de chaque photon", "La vitesse de la table"],a:1,x:"Il compte les photons un par un et mesure leur énergie, d’où l’imagerie spectrale."}
+);
+
 QUIZ.forEach(q=>{ if(q.th==="manip"&&!q.ue){ q.ue={aqm1:"scanner",aqm2:"irm",aqm3:"radiopharma",aqm4:"mednuc"}[q.id]; } });
 // ======================= état
 const SESSION = 15, INTERVALS = [1,3,7,15,30,60];
@@ -841,6 +887,31 @@ requestAnimationFrame(loop);
 
 // ======================= cartes
 const ICON={like:'<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-9.2-8.6C1.2 8.2 3.1 4.5 6.6 4.5c2 0 3.4 1.1 4.4 2.6 1-1.5 2.4-2.6 4.4-2.6 3.5 0 5.4 3.7 3.8 6.9C19 15.6 12 20 12 20z"/></svg>',save:'<svg viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-4-6 4z"/></svg>',share:'<svg viewBox="0 0 24 24"><path d="M4 12v7h16v-7M12 3v12M7.5 7.5 12 3l4.5 4.5"/></svg>',list:'<svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg>',flag:'<svg viewBox="0 0 24 24"><path d="M5 21V4h11l-2 4 2 4H5"/></svg>'};
+function buzz(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
+function confetti(el,x,y){if(RM)return;const r=el.getBoundingClientRect(),cols=["#FFD866","#5FE0D0","#FF8E8E","#B9A8FF","#9BE39F","#FFB066"];
+  for(let i=0;i<22;i++){const d=document.createElement("i");d.className="confetti";d.style.left=(x-r.left)+"px";d.style.top=(y-r.top)+"px";d.style.background=cols[i%cols.length];
+    const a=Math.random()*Math.PI*2,v=60+Math.random()*120;d.style.setProperty("--dx",Math.cos(a)*v+"px");d.style.setProperty("--dy",(Math.sin(a)*v+90)+"px");d.style.setProperty("--r",(Math.random()*720-360)+"deg");el.appendChild(d);setTimeout(()=>d.remove(),1200)}}
+const TTS="speechSynthesis" in window;let sayBtn=null;
+function say(c,btn){if(!TTS)return;const ss=window.speechSynthesis;if(sayBtn===btn&&ss.speaking){ss.cancel();btn.setAttribute("aria-pressed","false");sayBtn=null;return}
+  ss.cancel();if(sayBtn)sayBtn.setAttribute("aria-pressed","false");const txt=[c.t,c.b,...(c.steps||[])].join(". ").replace(/\s*·\s*/g,", ");
+  const vs=ss.getVoices().filter(v=>/^fr/i.test(v.lang));const parts=txt.match(/[^.!?]+[.!?]*/g)||[txt];sayBtn=btn;btn.setAttribute("aria-pressed","true");
+  parts.forEach((t,i)=>{const u=new SpeechSynthesisUtterance(t.trim());u.lang="fr-FR";if(vs.length)u.voice=vs.find(v=>v.localService)||vs[0];u.rate=1.02;if(i===parts.length-1)u.onend=()=>{if(sayBtn===btn){btn.setAttribute("aria-pressed","false");sayBtn=null}};ss.speak(u)})}
+if(TTS){try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}catch(e){}}
+const zoom=document.getElementById("zoom"),zimg=zoom.querySelector("img");let Z={s:1,x:0,y:0},ptrs=new Map(),pinch=null,lastTap=0;
+const zapply=()=>{zimg.style.transform=`translate(calc(-50% + ${Z.x}px),calc(-50% + ${Z.y}px)) scale(${Z.s})`};
+function openZoom(src,alt){zimg.src=src;zimg.alt=alt||"";Z={s:1,x:0,y:0};zapply();zoom.classList.add("on")}
+function closeZoom(){zoom.classList.remove("on");ptrs.clear();pinch=null}
+zoom.querySelector(".zx").onclick=closeZoom;
+let zdown=null;zoom.addEventListener("pointerdown",e=>{if(e.target.classList.contains("zx"))return;zdown=e.target;zoom.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),s:Z.s}}
+  if(ptrs.size===1){const n=Date.now();if(n-lastTap<300){Z=Z.s>1?{s:1,x:0,y:0}:{s:2.5,x:0,y:0};zapply()}lastTap=n}});
+zoom.addEventListener("pointermove",e=>{if(!ptrs.has(e.pointerId))return;const pr=ptrs.get(e.pointerId);const dx=e.clientX-pr.x,dy=e.clientY-pr.y;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2&&pinch){const [a,b]=[...ptrs.values()];Z.s=clamp(pinch.s*Math.hypot(a.x-b.x,a.y-b.y)/pinch.d,1,5)}else if(Z.s>1){Z.x+=dx;Z.y+=dy}zapply()});
+const zup=e=>{const was=ptrs.size;ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(was===1&&Z.s===1&&zdown===zoom&&e.type==="pointerup")closeZoom()};
+zoom.addEventListener("pointerup",zup);zoom.addEventListener("pointercancel",zup);
+window.addEventListener("keydown",e=>{if(e.key==="Escape"&&zoom.classList.contains("on"))closeZoom()});
+function schemaEl(c){const w=document.createElement("div");w.className="schema-wrap";const im=document.createElement("img");im.className="schema";im.src=c.img;im.alt="Schéma : "+c.t;im.loading="lazy";w.appendChild(im);
+  w.onclick=e=>{e.stopPropagation();openZoom(c.img,im.alt)};return w}
 function themeVars(el,th){const T=THEMES[th];el.style.setProperty("--g1",T.g[0]);el.style.setProperty("--g2",T.g[1]);el.style.setProperty("--a",T.a)}
 function rail(c){const r=document.createElement("div");r.className="rail";
   r.innerHTML=`<button class="rbtn like" aria-pressed="${liked.includes(c.id)}"><span class="ic">${ICON.like}</span>J’aime</button>
@@ -856,27 +927,29 @@ function fillBody(box,c){
   if(c.steps&&c.steps.length){const ol=document.createElement("ol");ol.className="steps";c.steps.forEach(s=>{const li=document.createElement("li");li.textContent=s;ol.appendChild(li)});box.appendChild(ol)}
   if(c.src){const s=document.createElement("p");s.className="src";s.textContent="Source : "+c.src;box.appendChild(s)}}
 function learnRow(c){const row=document.createElement("div");row.className="learn";const st=S[c.id]&&S[c.id].s;
-  row.innerHTML=`<button class="lb known">Je savais déjà</button><button class="lb learnb ${st==="learn"?"on":""}">${st==="learn"?"✓ En révision":"Appris !"}</button>`;
+  row.innerHTML=`${TTS?'<button class="lb say" aria-pressed="false" aria-label="Écouter la carte">🔊</button>':""}<button class="lb known">Je savais déjà</button><button class="lb learnb ${st==="learn"?"on":""}">${st==="learn"?"✓ En révision":"Appris !"}</button>`;
+  const sb=row.querySelector(".say");if(sb)sb.onclick=()=>say(c,sb);
   row.querySelector(".known").onclick=()=>{S[c.id]={s:"known"};saveS();toast("Elle ne reviendra plus");row.querySelectorAll("button").forEach(b=>b.disabled=true)};
   row.querySelector(".learnb").onclick=e=>{if(S[c.id]&&S[c.id].s==="learn")return;S[c.id]={s:"learn",n:0,st:1,df:5,due:addDays(1)};saveS();e.currentTarget.classList.add("on");e.currentTarget.textContent="✓ En révision";toast("Elle reviendra demain en révision")};
   return row}
 function cardEl(c){const el=document.createElement("section");el.className="card";el.dataset.id=c.id;el.dataset.th=c.th;themeVars(el,c.th);
   el.innerHTML=`<div class="content"></div>${meta(c)}`;const box=el.querySelector(".content");
-  if(c.img){const im=document.createElement("img");im.className="schema";im.src=c.img;im.alt="Schéma : "+c.t;im.loading="lazy";box.appendChild(im)}else if(c.viz&&VIZ[c.viz])box.appendChild(vizCanvas(c.viz,THEMES[c.th].a));else{const e=document.createElement("div");e.className="emoji";e.textContent=c.e||THEMES[c.th].e;box.appendChild(e)}
+  if(c.course){const k=document.createElement("span");k.className="kind";k.textContent="📘 Ton cours";box.appendChild(k)}
+  if(c.img)box.appendChild(schemaEl(c));else if(c.viz&&VIZ[c.viz])box.appendChild(vizCanvas(c.viz,THEMES[c.th].a));else{const e=document.createElement("div");e.className="emoji";e.textContent=c.e||THEMES[c.th].e;box.appendChild(e)}
   fillBody(box,c);box.appendChild(learnRow(c));el.appendChild(rail(c));
   let last=0;el.addEventListener("click",ev=>{if(ev.target.closest("button"))return;const n=Date.now();if(n-last<300){if(!liked.includes(c.id))toggle("like",c.id);heartBurst(el,ev.clientX,ev.clientY)}last=n});
   return el}
 function reviewEl(c){const el=document.createElement("section");el.className="card rv";el.dataset.id="rv-"+c.id;el.dataset.th=c.th;themeVars(el,c.th);
   el.innerHTML=`<div class="content"><span class="rv-label">🔁 Révision</span><div class="emoji">${c.e||THEMES[c.th].e}</div><h2></h2><p class="body">Tu te souviens de l’explication ? Essaie de la dire dans ta tête avant de regarder.</p><button class="big show">Voir la réponse</button><div class="reveal" hidden></div><div class="grade ans" hidden></div></div>${meta(c)}`;
   el.querySelector("h2").textContent=c.t;const rv=el.querySelector(".reveal");
-  el.querySelector(".show").onclick=e=>{e.currentTarget.remove();el.querySelector(".body").remove();el.querySelector(".emoji").remove();if(c.img){const im=document.createElement("img");im.className="schema";im.src=c.img;im.alt="Schéma : "+c.t;rv.appendChild(im)}else if(c.viz&&VIZ[c.viz])rv.appendChild(vizCanvas(c.viz,THEMES[c.th].a));const p=document.createElement("p");p.className="body";p.textContent=c.b;rv.appendChild(p);
+  el.querySelector(".show").onclick=e=>{e.currentTarget.remove();el.querySelector(".body").remove();el.querySelector(".emoji").remove();if(c.img){rv.appendChild(schemaEl(c))}else if(c.viz&&VIZ[c.viz])rv.appendChild(vizCanvas(c.viz,THEMES[c.th].a));const p=document.createElement("p");p.className="body";p.textContent=c.b;rv.appendChild(p);
     if(c.steps){const ol=document.createElement("ol");ol.className="steps";c.steps.forEach(s=>{const li=document.createElement("li");li.textContent=s;ol.appendChild(li)});rv.appendChild(ol)}rv.hidden=false;const gb=el.querySelector(".ans");gb.innerHTML=["Oublié","Difficile","Bien","Facile"].map((l,g)=>`<button class="lb g${g}">${l}<small>${ivTxt(preview(c.id,g))}</small></button>`).join("");gb.hidden=false;
-    gb.querySelectorAll("button").forEach((b,g)=>b.onclick=()=>{const iv=grade(c.id,g);toast(iv<0?"Maîtrisée 🎉":iv===1?"Elle revient demain":`Prochaine révision dans ${ivTxt(iv)}`);gb.querySelectorAll("button").forEach(x=>x.disabled=true);b.classList.add("on");renderStat()})};
+    gb.querySelectorAll("button").forEach((b,g)=>b.onclick=()=>{const iv=grade(c.id,g);if(iv<0){const br=b.getBoundingClientRect();confetti(el,br.left+br.width/2,br.top);buzz(30)}toast(iv<0?"Maîtrisée 🎉":iv===1?"Elle revient demain":`Prochaine révision dans ${ivTxt(iv)}`);gb.querySelectorAll("button").forEach(x=>x.disabled=true);b.classList.add("on");renderStat()})};
   return el}
 function quizEl(q){const el=document.createElement("section");el.className="card";el.dataset.id=q.id;el.dataset.th=q.th;themeVars(el,q.th);
   el.innerHTML=`<div class="content"><div class="emoji">❓</div><h2></h2><div class="opts"></div><p class="ex" hidden></p></div>${meta({th:q.th,ue:q.ue},"")}`;
   el.querySelector("h2").textContent=q.q;const box=el.querySelector(".opts"),ex=el.querySelector(".ex");
-  q.o.forEach((t,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=t;b.onclick=()=>{box.querySelectorAll(".opt").forEach((o,j)=>{o.disabled=true;if(j===q.a)o.classList.add("good")});if(i!==q.a)b.classList.add("bad");ex.textContent=(i===q.a?"Bien joué. ":"Raté. ")+q.x;ex.hidden=false;const r=QS[q.id]||{ok:0,ko:0};i===q.a?r.ok++:r.ko++;r.last=today;QS[q.id]=r;store.set("su3-quiz",QS)};box.appendChild(b)});
+  q.o.forEach((t,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=t;b.onclick=()=>{box.querySelectorAll(".opt").forEach((o,j)=>{o.disabled=true;if(j===q.a)o.classList.add("good")});if(i!==q.a)b.classList.add("bad");ex.textContent=(i===q.a?"Bien joué. ":"Raté. ")+q.x;ex.hidden=false;if(i===q.a){const br=b.getBoundingClientRect();confetti(el,br.left+br.width/2,br.top);buzz(25)}else buzz([40,60,40]);const r=QS[q.id]||{ok:0,ko:0};i===q.a?r.ok++:r.ko++;r.last=today;QS[q.id]=r;store.set("su3-quiz",QS)};box.appendChild(b)});
   return el}
 function pauseEl(){const el=document.createElement("section");el.className="card";el.style.setProperty("--g1","#22252F");el.style.setProperty("--g2","#0B0C10");
   const lbl=theme==="rev"?(UES[ue]||"Manip"):theme==="all"?"":THEMES[theme].label;
@@ -917,7 +990,7 @@ function build(){
   while(di<due.length)queue.push({k:"r",d:due[di++]});
   append();feed.scrollTop=0;renderStat();
 }
-function append(){let n=0;const lim=batch||SESSION;batch=0;while(shown<queue.length&&n<lim){const it=queue[shown++];const el=it.k==="x"?examEl():it.k==="c"?cardEl(it.d):it.k==="r"?reviewEl(it.d):quizEl(it.d);feed.appendChild(el);obs.observe(el);n++}feed.appendChild(pauseEl())}
+function append(){let n=0;const lim=batch||SESSION;batch=0;while(shown<queue.length&&n<lim){const it=queue[shown++];const el=it.k==="x"?examEl():it.k==="c"?cardEl(it.d):it.k==="r"?reviewEl(it.d):quizEl(it.d);feed.appendChild(el);watch(el);n++}{const pe=pauseEl();feed.appendChild(pe);watch(pe)}}
 
 async function generate(pc){const st=pc.querySelector(".status"),btn=pc.querySelector(".gen");btn.disabled=true;st.textContent="Claude prépare tes cartes… (jusqu’à une minute)";
   const th=theme==="rev"?"manip":theme==="all"?Object.keys(THEMES).sort((a,b)=>weight(b)-weight(a))[Math.floor(Math.random()*2)]:theme;
@@ -932,15 +1005,17 @@ Réponds UNIQUEMENT avec un tableau JSON : [{"e":"emoji","t":"titre","b":"texte"
   try{const data=await sample.json(prompt,{modelTier:"default"});
     const arr=(Array.isArray(data)?data:[]).filter(x=>x&&x.t&&x.b).slice(0,5).map((x,i)=>({id:"g"+Date.now()+i,th,ue:theme==="rev"&&UES[ue]?ue:undefined,e:String(x.e||THEMES[th].e).slice(0,4),t:String(x.t),b:String(x.b),steps:Array.isArray(x.steps)&&x.steps.length?x.steps.slice(0,4).map(String):undefined,src:x.src?String(x.src):undefined,ai:true}));
     if(!arr.length)throw{code:"empty"};gen=gen.concat(arr).slice(-300);store.set("su3-gen",gen);
-    pc.remove();arr.forEach(c=>{const el=cardEl(c);feed.appendChild(el);obs.observe(el)});feed.appendChild(pauseEl());toast("5 nouvelles cartes ajoutées");
+    pc.remove();arr.forEach(c=>{const el=cardEl(c);feed.appendChild(el);watch(el)});feed.appendChild(pauseEl());toast("5 nouvelles cartes ajoutées");
   }catch(e){btn.disabled=false;st.textContent=e&&e.code==="not_granted"?"Génération non autorisée. Les cartes prêtes restent disponibles.":e&&e.code==="rate_limited"?"Trop de demandes d’un coup. Réessaie dans un moment.":"La génération n’a pas abouti. Réessaie avec le bouton."}}
 
 // ======================= suivi
 const enter=new Map();
 const obs=new IntersectionObserver(es=>es.forEach(e=>{const el=e.target,id=el.dataset.id,th=el.dataset.th;
-  if(e.isIntersecting){enter.set(el,Date.now());if(id&&!stats.seen.includes(id)){if(!stats.seen.length)stats.streak+=1;stats.seen.push(id);store.set("su3-stats",stats);renderStat()}if(id&&!id.startsWith("rv-")){seenEver.add(id);store.set("su3-seen",[...seenEver].slice(-2000))}}
+  if(e.isIntersecting){el.classList.add("in");pbar(el);enter.set(el,Date.now());if(id&&!stats.seen.includes(id)){if(!stats.seen.length)stats.streak+=1;stats.seen.push(id);store.set("su3-stats",stats);renderStat()}if(id&&!id.startsWith("rv-")){seenEver.add(id);store.set("su3-seen",[...seenEver].slice(-2000))}}
   else if(enter.has(el)&&th){const s=Math.min(30,(Date.now()-enter.get(el))/1000);enter.delete(el);dwell[th]=(dwell[th]||0)+s;store.set("su3-dwell",dwell)}}),{root:feed,threshold:.6});
 
+function watch(el){el.dataset.obs="1";obs.observe(el)}
+const pbi=document.querySelector("#pbar i");function pbar(el){const all=[...feed.querySelectorAll(".card")];const i=all.indexOf(el);if(i>=0)pbi.style.width=Math.round(100*(i+1)/all.length)+"%"}
 function toggle(kind,id){const map={like:["su3-liked",()=>liked,v=>liked=v],save:["su3-saved",()=>saved,v=>saved=v],flag:["su3-flag",()=>flagged,v=>flagged=v]}[kind];
   let arr=map[1]();arr=arr.includes(id)?arr.filter(x=>x!==id):arr.concat(id);map[2](arr);store.set(map[0],arr);const on=arr.includes(id);
   if(kind==="save")toast(on?"Ajoutée à ta liste":"Retirée de ta liste");if(kind==="flag")toast(on?"Signalée : retrouve-la dans Ma liste":"Signalement retiré");
